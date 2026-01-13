@@ -2,8 +2,6 @@
 
 from typing import Dict, Any
 from .base_llm import BaseLLM
-from .openai_llm import OpenAILLM
-from .anthropic_llm import AnthropicLLM
 from .ollama_llm import OllamaLLM
 from .mcp_llm import MCPLLM
 
@@ -12,8 +10,6 @@ class LLMFactory:
     """Factory class for creating LLM instances"""
     
     _providers = {
-        "openai": OpenAILLM,
-        "anthropic": AnthropicLLM,
         "ollama": OllamaLLM,
         "mcp": MCPLLM
     }
@@ -24,7 +20,7 @@ class LLMFactory:
         Create an LLM instance for the specified provider
         
         Args:
-            provider: LLM provider name (openai, anthropic, ollama, mcp)
+            provider: LLM provider name (ollama, mcp)
             config: Configuration dictionary
             
         Returns:

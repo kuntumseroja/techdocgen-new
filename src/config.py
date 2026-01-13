@@ -29,13 +29,6 @@ class Config:
     
     def _load_env_vars(self):
         """Override config with environment variables"""
-        # LLM API Keys
-        if os.getenv("OPENAI_API_KEY"):
-            self.config.setdefault("llm_providers", {}).setdefault("openai", {})["api_key"] = os.getenv("OPENAI_API_KEY")
-        
-        if os.getenv("ANTHROPIC_API_KEY"):
-            self.config.setdefault("llm_providers", {}).setdefault("anthropic", {})["api_key"] = os.getenv("ANTHROPIC_API_KEY")
-        
         # Ollama settings
         if os.getenv("OLLAMA_BASE_URL"):
             self.config.setdefault("llm_providers", {}).setdefault("ollama", {})["base_url"] = os.getenv("OLLAMA_BASE_URL")

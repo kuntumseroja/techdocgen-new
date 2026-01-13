@@ -15,7 +15,7 @@ console = Console()
 @click.option('--type', '-t', type=click.Choice(['file', 'folder', 'git'], case_sensitive=False), 
               default='auto', help='Source type (auto-detect if not specified)')
 @click.option('--output', '-o', help='Output file path (default: ./docs/technical_docs.md)')
-@click.option('--provider', '-p', type=click.Choice(['openai', 'anthropic', 'ollama', 'mcp'], case_sensitive=False),
+@click.option('--provider', '-p', type=click.Choice(['ollama', 'mcp'], case_sensitive=False),
               help='LLM provider to use (default: from config)')
 @click.option('--config', '-c', help='Path to config.yaml file')
 @click.option('--branch', '-b', help='Git branch to use (for git sources)')

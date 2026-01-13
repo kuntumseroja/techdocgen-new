@@ -296,7 +296,7 @@ def main():
         
         # LLM Provider Selection
         config = load_config()
-        available_providers = ['ollama', 'anthropic', 'openai', 'mcp']
+        available_providers = ['ollama', 'mcp']
         default_provider = config.get_default_provider()
         
         selected_provider = st.selectbox(
@@ -353,22 +353,6 @@ def main():
             # Store in session state for use during generation
             st.session_state.ollama_url = ollama_url
             st.session_state.ollama_model = ollama_model
-        
-        elif selected_provider == 'anthropic':
-            st.markdown("#### Anthropic Settings")
-            api_key = os.getenv("ANTHROPIC_API_KEY", "")
-            if api_key:
-                st.success("✅ API Key configured")
-            else:
-                st.warning("⚠️ Set ANTHROPIC_API_KEY in .env")
-        
-        elif selected_provider == 'openai':
-            st.markdown("#### OpenAI Settings")
-            api_key = os.getenv("OPENAI_API_KEY", "")
-            if api_key:
-                st.success("✅ API Key configured")
-            else:
-                st.warning("⚠️ Set OPENAI_API_KEY in .env")
         
         st.markdown("---")
         
