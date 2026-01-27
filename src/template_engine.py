@@ -117,12 +117,30 @@ class TemplateEngine:
 
 **TechDocGen by IBMC**
 
-Generated using {{ llm_provider|upper }} LLM
+Model Use : {% if llm_provider == 'ollama' %}local {% endif %}{{ model_name }}
 
 ---
 
 {% if dependency_map %}
 {{ dependency_map }}
+
+---
+{% endif %}
+
+{% if messaging_flows %}
+## Messaging Flows
+
+{% for flow in messaging_flows %}
+- Queue `{{ flow.queue }}`{% if flow.consumers %} -> Consumers: {{ flow.consumers|join(', ') }}{% endif %}{% if flow.sagas %}; Sagas: {{ flow.sagas|join(', ') }}{% endif %} {% if flow.file %}(`{{ flow.file }}`){% endif %}
+{% endfor %}
+
+---
+{% endif %}
+
+{% if integration_graph %}
+## Integration Graph
+
+{{ integration_graph }}
 
 ---
 {% endif %}
@@ -155,10 +173,56 @@ Found {{ files|length }} {{ language }} file(s)
 
 {% endif %}
 
+{% if file_info.parsed_info.interfaces %}
+**Interfaces:** {{ file_info.parsed_info.interfaces|length }}
+
+{% endif %}
+
+{% if file_info.parsed_info.enums %}
+**Enums:** {{ file_info.parsed_info.enums|length }}
+
+{% endif %}
+
+{% if file_info.parsed_info.types %}
+**Type Aliases:** {{ file_info.parsed_info.types|length }}
+
+{% endif %}
+
+{% if file_info.parsed_info.top_level_keys %}
+**Top-Level Config Keys:** {{ file_info.parsed_info.top_level_keys|length }}
+
+{% endif %}
+
+{% if file_info.parsed_info.custom_elements %}
+**Custom Elements:** {{ file_info.parsed_info.custom_elements|length }}
+
+{% endif %}
+
 {% if file_info.sequence_diagram %}
 #### Sequence Diagram
 
 {{ file_info.sequence_diagram }}
+
+{% endif %}
+
+{% if file_info.messaging_flows %}
+#### Messaging Flows
+
+{% if file_info.messaging_flows.flows %}
+{% for flow in file_info.messaging_flows.flows %}
+- Queue `{{ flow.queue }}`{% if flow.consumers %} -> Consumers: {{ flow.consumers|join(', ') }}{% endif %}{% if flow.sagas %}; Sagas: {{ flow.sagas|join(', ') }}{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if file_info.messaging_flows.publishes %}
+- Publishes: {{ file_info.messaging_flows.publishes|join(', ') }}
+{% endif %}
+{% if file_info.messaging_flows.sends %}
+- Sends: {{ file_info.messaging_flows.sends|join(', ') }}
+{% endif %}
+{% if file_info.messaging_flows.send_endpoints %}
+- Send Endpoints: {{ file_info.messaging_flows.send_endpoints|join(', ') }}
+{% endif %}
 
 {% endif %}
 

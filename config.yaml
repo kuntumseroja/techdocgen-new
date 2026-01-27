@@ -8,6 +8,10 @@ languages:
   - vbnet
   - fsharp
   - php
+  - javascript
+  - typescript
+  - markup
+  - config
 
 # File extensions mapping
 extensions:
@@ -16,6 +20,10 @@ extensions:
   vbnet: [.vb, .vbhtml]   # VB.NET and Razor VB files
   fsharp: [.fs, .fsx]     # F# source files
   php: [.php]
+  javascript: [.js, .jsx, .mjs, .cjs]
+  typescript: [.ts, .tsx]
+  markup: [.html, .htm]
+  config: [.json, .yaml, .yml]
 
 # LLM Providers
 llm_providers:
@@ -45,8 +53,12 @@ documentation:
   include_classes: true
   include_functions: true
   max_file_size_mb: 10
+  include_patterns: []
   include_sequence_diagrams: false  # Generate sequence diagrams (set to true to enable, but may have syntax errors)
   include_dependency_map: false  # Generate dependency map analysis (set to true to enable)
+  streaming_mode: false  # Stream output to file for large repositories
+  chunk_size_chars: 0  # Set > 0 to enable chunking for large files (e.g., 200000)
+  chunk_overlap_chars: 0  # Optional overlap between chunks
   # Template configuration
   template: "confluence.md"  # Template to use: "confluence.md" (recommended for consistent structure), "default.md", or custom template name
   template_dir: null  # Custom template directory (null = use default ./templates)
@@ -58,6 +70,14 @@ documentation:
     - "**/.git/**"
     - "**/target/**"
     - "**/build/**"
+    - "**/dist/**"
+    - "**/packages/**"
+    - "**/*.min.js"
+    - "**/*.bundle.js"
+    - "**/*.dll"
+    - "**/*.so"
+    - "**/*.jar"
+    - "**/*.exe"
 
 # Output settings
 output:
@@ -72,4 +92,19 @@ dependency_map:
   enabled: false  # Enable dependency map generation
   formats: [json, markdown]  # Available formats: json, dot, mermaid, markdown
   output_directory: ./docs  # Directory for dependency map files
+
+# Domain profiles for per-service documentation
+domains:
+  - name: "example-service"
+    type: "folder"
+    path: "./services/example"
+    include_patterns:
+      - "**/*.cs"
+      - "**/*.json"
+    exclude_patterns:
+      - "**/bin/**"
+      - "**/obj/**"
+    streaming_mode: true
+    chunk_size_chars: 200000
+    output: "./docs/example-service.md"
 

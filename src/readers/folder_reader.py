@@ -20,7 +20,10 @@ class FolderReader(BaseReader):
         if not self.folder_path.is_dir():
             raise ValueError(f"Path is not a directory: {self.folder_path}")
         
-        files = []
+        return list(self.iter_files())
+
+    def iter_files(self):
+        """Stream source code files from the folder"""
         extensions = self.config.get("extensions", {})
         all_extensions = []
         for exts in extensions.values():
@@ -32,6 +35,9 @@ class FolderReader(BaseReader):
                 continue
             
             if file_path.suffix.lower() not in all_extensions:
+                continue
+            
+            if not self._should_include(file_path):
                 continue
             
             if self._should_exclude(file_path):
@@ -47,18 +53,16 @@ class FolderReader(BaseReader):
                 
                 language = self._detect_language(file_path)
                 
-                files.append({
+                yield {
                     "path": str(file_path),
                     "content": content,
                     "language": language,
                     "name": file_path.name,
                     "relative_path": str(file_path.relative_to(self.folder_path))
-                })
+                }
             except Exception as e:
                 print(f"Error reading file {file_path}: {e}")
                 continue
-        
-        return files
 
 
 

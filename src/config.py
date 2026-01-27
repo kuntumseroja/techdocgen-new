@@ -43,11 +43,15 @@ class Config:
     def _default_config(self) -> Dict[str, Any]:
         """Return default configuration"""
         return {
-            "languages": ["java", "csharp", "php"],
+            "languages": ["java", "csharp", "php", "javascript", "typescript", "markup", "config"],
             "extensions": {
                 "java": [".java"],
                 "csharp": [".cs"],
-                "php": [".php"]
+                "php": [".php"],
+                "javascript": [".js", ".jsx", ".mjs", ".cjs"],
+                "typescript": [".ts", ".tsx"],
+                "markup": [".html", ".htm"],
+                "config": [".json", ".yaml", ".yml"]
             },
             "llm_providers": {
                 "ollama": {
@@ -62,7 +66,11 @@ class Config:
                 "include_imports": True,
                 "include_methods": True,
                 "include_classes": True,
-                "include_functions": True
+                "include_functions": True,
+                "include_patterns": [],
+                "streaming_mode": False,
+                "chunk_size_chars": 0,
+                "chunk_overlap_chars": 0
             },
             "output": {
                 "format": "markdown",

@@ -23,6 +23,9 @@ class FileReader(BaseReader):
         if self._should_exclude(self.file_path):
             return []
         
+        if not self._should_include(self.file_path):
+            return []
+        
         if not self._is_valid_size(self.file_path):
             print(f"Warning: File {self.file_path} exceeds size limit, skipping")
             return []

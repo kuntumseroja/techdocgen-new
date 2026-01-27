@@ -1,0 +1,5 @@
+redis:
+  host: "redis.local"
+  port: 6379
+  database: 0
+  timeout_ms: 1000

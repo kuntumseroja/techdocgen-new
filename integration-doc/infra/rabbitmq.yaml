@@ -1,0 +1,14 @@
+rabbitmq:
+  host: "rabbitmq.local"
+  vhost: "/"
+  username: "guest"
+  password: "guest"
+  exchanges:
+    - name: "orders"
+      type: "topic"
+  queues:
+    - name: "order-created"
+      durable: true
+      binding:
+        exchange: "orders"
+        routing_key: "order.created"

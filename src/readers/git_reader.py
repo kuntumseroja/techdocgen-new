@@ -153,7 +153,15 @@ class GitReader(BaseReader):
         except Exception as e:
             raise ValueError(f"Failed to access Git repository: {e}")
         
-        files = []
+        return list(self.iter_files())
+
+    def iter_files(self):
+        """Stream source code files from the Git repository"""
+        try:
+            self._clone_or_open()
+        except Exception as e:
+            raise ValueError(f"Failed to access Git repository: {e}")
+        
         extensions = self.config.get("extensions", {})
         all_extensions = []
         for exts in extensions.values():
@@ -162,14 +170,15 @@ class GitReader(BaseReader):
         # Get repository root
         repo_root = Path(self.repo.working_dir)
         
-        # First, collect all matching files
-        matching_files = []
         print("Scanning repository for source files...")
         for file_path in repo_root.rglob("*"):
             if not file_path.is_file():
                 continue
             
             if file_path.suffix.lower() not in all_extensions:
+                continue
+            
+            if not self._should_include(file_path):
                 continue
             
             if self._should_exclude(file_path):
@@ -179,29 +188,20 @@ class GitReader(BaseReader):
                 print(f"Warning: File {file_path} exceeds size limit, skipping")
                 continue
             
-            matching_files.append(file_path)
-        
-        print(f"Found {len(matching_files)} source file(s). Reading content...")
-        
-        # Read file contents
-        for idx, file_path in enumerate(matching_files, 1):
             try:
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                 
                 language = self._detect_language(file_path)
                 
-                files.append({
+                yield {
                     "path": str(file_path),
                     "content": content,
                     "language": language,
                     "name": file_path.name,
                     "relative_path": str(file_path.relative_to(repo_root))
-                })
+                }
             except Exception as e:
                 print(f"Error reading file {file_path}: {e}")
                 continue
-        
-        print(f"Successfully read {len(files)} file(s)")
-        return files
 

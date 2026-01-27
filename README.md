@@ -7,14 +7,18 @@ A comprehensive tool for generating technical documentation from source code in 
 ## Features
 
 - **Multiple Source Types**: Read from single files, folders, or Git repositories
-- **Language Support**: Java, .NET (C#, VB.NET, F#), and PHP
+- **Language Support**: Java, .NET (C#, VB.NET, F#), PHP, JavaScript/TypeScript, HTML, and JSON/YAML configs
 - **LLM Integration**: Support for multiple LLM providers:
   - OpenAI (GPT-4, GPT-3.5)
   - Anthropic (Claude)
   - Ollama (Local LLMs)
   - MCP (Model Context Protocol)
-- **Intelligent Parsing**: Extracts classes, methods, interfaces, imports, and more
+- **Intelligent Parsing**: Extracts classes, methods, interfaces, imports, types, and more
 - **Markdown Output**: Generates well-formatted markdown documentation
+- **Large Repo Support**: Streaming output + chunking for huge files
+- **Domain Profiles**: Per-service documentation with scoped include/exclude rules
+- **Messaging Flow Extraction**: MassTransit/RabbitMQ flows from C# configs
+- **Cross-Stack Integration Graph**: Links exchanges/queues across Node.js, C#, and infra configs
 
 ## Installation
 
@@ -124,6 +128,21 @@ Verbose output:
 python main.py --source ./src --type folder --verbose
 ```
 
+Stream output for large repos:
+```bash
+python main.py --source ./src --type folder --stream --output ./docs/streamed_docs.md
+```
+
+Generate a configured domain profile:
+```bash
+python main.py --domain orders-service
+```
+
+Generate all domain profiles:
+```bash
+python main.py --all-domains
+```
+
 ## LLM Provider Setup
 
 ### Ollama (Local LLM - Recommended for Privacy)
@@ -228,6 +247,76 @@ python main.py --source ./MySolution --type folder --provider openai
 python main.py --source https://github.com/user/php-app.git --type git --branch main --provider ollama
 ```
 
+### Example 4: Document a Node.js/Angular Repo (JS/TS/HTML)
+```bash
+python main.py --source ./frontend --type folder --provider ollama --output frontend_docs.md
+```
+
+### Example 5: Document Infrastructure Configs (JSON/YAML)
+```bash
+python main.py --source ./infra --type folder --output infra_docs.md
+```
+
+### Example 6: Streaming + Chunking for Large Repo
+```bash
+python main.py --source ./monorepo --type folder --stream --output ./docs/monorepo.md
+```
+```yaml
+documentation:
+  streaming_mode: true
+  chunk_size_chars: 200000
+  chunk_overlap_chars: 1000
+```
+
+### Example 7: Domain Profile (Per-Service)
+```bash
+python main.py --domain orders-service
+```
+```yaml
+domains:
+  - name: "orders-service"
+    type: "folder"
+    path: "./services/orders"
+    include_patterns:
+      - "**/*.cs"
+      - "**/*.json"
+    exclude_patterns:
+      - "**/bin/**"
+      - "**/obj/**"
+    streaming_mode: true
+    output: "./docs/orders-service.md"
+```
+
+### Example 8: MassTransit/RabbitMQ Flow Extraction
+```bash
+python main.py --source ./services/orders --type folder --output orders_mq_docs.md
+```
+```csharp
+cfg.ReceiveEndpoint("order-created", e =>
+{
+    e.Consumer<OrderCreatedConsumer>();
+});
+```
+
+### Example 10: Cross-Stack Integration Graph (Node + Infra + C#)
+```bash
+python main.py --source ./examples --type folder --output ./docs/integration_graph.md
+```
+The generated docs include an "Integration Graph" section in Mermaid, linking:
+- Node `amqplib` publishes/consumes
+- Infra JSON/YAML queues/exchanges/bindings
+- C# MassTransit consumers and send endpoints
+
+### Example 9: Sample Projects in `examples/`
+
+Use the included sample folders:
+```bash
+python main.py --source ./examples/angular-app --type folder --output ./docs/angular_example.md
+python main.py --source ./examples/node-service --type folder --output ./docs/node_example.md
+python main.py --source ./examples/csharp-masstransit --type folder --output ./docs/masstransit_example.md
+python main.py --source ./examples/infra-config --type folder --output ./docs/infra_example.md
+```
+
 ## Configuration Options
 
 ### Exclude Patterns
@@ -241,12 +330,54 @@ documentation:
     - "**/bin/**"
 ```
 
+### Include Patterns (Scope a Subset)
+
+Only document matching files:
+```yaml
+documentation:
+  include_patterns:
+    - "**/*.cs"
+    - "**/*.ts"
+```
+
 ### File Size Limits
 
 Set maximum file size:
 ```yaml
 documentation:
   max_file_size_mb: 10
+```
+
+### Streaming + Chunking (Large Repos)
+
+Enable streaming and chunking for large repositories:
+```yaml
+documentation:
+  streaming_mode: true
+  chunk_size_chars: 200000
+  chunk_overlap_chars: 0
+```
+
+### Messaging Flow Extraction (MassTransit/RabbitMQ)
+
+MassTransit queues/consumers/publishes/sends are automatically extracted from C# files. The docs include a "Messaging Flows" section when detected.
+
+### Domain Profiles (Per-Service Docs)
+
+Define per-service profiles in `config.yaml`:
+```yaml
+domains:
+  - name: "orders-service"
+    type: "folder"
+    path: "./services/orders"
+    include_patterns:
+      - "**/*.cs"
+      - "**/*.json"
+    exclude_patterns:
+      - "**/bin/**"
+      - "**/obj/**"
+    streaming_mode: true
+    output: "./docs/orders-service.md"
 ```
 
 ### LLM Settings
