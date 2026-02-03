@@ -13,6 +13,7 @@ import tempfile
 import shutil
 import requests
 from datetime import datetime
+import textwrap
 
 try:
     import streamlit_mermaid as stmd
@@ -273,6 +274,8 @@ def render_markdown_with_mermaid(content: str):
             diagram_code = re.sub(r'```\s*$', '', diagram_code, flags=re.MULTILINE)
             # Clean up: remove leading/trailing whitespace and normalize line endings
             diagram_code = diagram_code.strip()
+            # Normalize indentation for Mermaid parser
+            diagram_code = textwrap.dedent(diagram_code).strip()
             # Remove any empty lines at start/end
             lines = [line for line in diagram_code.split('\n') if line.strip() or len([l for l in diagram_code.split('\n') if l.strip()]) > 0]
             diagram_code = '\n'.join(lines).strip()
@@ -332,6 +335,20 @@ def main():
             index=available_providers.index(default_provider) if default_provider in available_providers else 0,
             help="Choose the LLM provider to generate documentation"
         )
+
+        doc_structures_dir = Path(__file__).parent / "doc_structures"
+        doc_structure_options = ["Default (file-centric)"]
+        if doc_structures_dir.exists():
+            doc_structure_options.extend(
+                sorted(p.stem for p in doc_structures_dir.glob("*.yaml"))
+            )
+        selected_doc_structure = st.selectbox(
+            "🧱 Document Structure",
+            options=doc_structure_options,
+            index=0,
+            help="Choose an architecture-centric structure or use the default file-centric output"
+        )
+        st.session_state.doc_structure = None if selected_doc_structure == "Default (file-centric)" else selected_doc_structure
         
         # Provider-specific settings
         if selected_provider == 'ollama':
@@ -530,7 +547,14 @@ def main():
                         file_status.text(f"🤖 Processing file {current}/{total}: {filename}")
                     
                     # Generate documentation with progress tracking
-                    if source_type == "Single File":
+                    doc_structure = st.session_state.get("doc_structure")
+                    if doc_structure:
+                        docs = generator.generate_architecture_docs_from_files(
+                            files,
+                            doc_structure_name=doc_structure,
+                            progress_callback=update_progress
+                        )
+                    elif source_type == "Single File":
                         docs = generator.generate_from_file(source_path, update_progress)
                     elif source_type == "Folder":
                         docs = generator.generate_from_folder(source_path, update_progress)

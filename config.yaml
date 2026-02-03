@@ -108,3 +108,21 @@ domains:
     chunk_size_chars: 200000
     output: "./docs/example-service.md"
 
+  # Example: .NET CQRS project with architecture-centric documentation
+  - name: "dotnet-cqrs-master"
+    type: "folder"
+    path: "./dotnet-cqrs-master"
+    doc_structure: "dotnet-cqrs"  # Use architecture-centric structure from doc_structures/
+    template: "architecture.md"   # Use architecture template
+    include_patterns:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+    exclude_patterns:
+      - "**/bin/**"
+      - "**/obj/**"
+    output: "./docs/dotnet-cqrs-architecture.md"
+
+# Architecture documentation settings
+# Use doc_structures/ folder for defining section layouts
+# Available structures: generic, dotnet-cqrs (see doc_structures/README.md)

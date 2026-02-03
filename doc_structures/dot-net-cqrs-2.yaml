@@ -1,0 +1,335 @@
+name: dot-net-cqrs-2
+title: "Coretax Technical Documentation"
+description: "Coretax bounded context documentation"
+template: architecture.md
+
+sections:
+  - id: bounded-context-definition
+    title: "Bounded Context Definition"
+    description: |
+      ## Order Management Bounded Context
+      Define the single bounded context represented in this sample as the Order Management context. Its responsibility is to accept, process, and track simple order operations (creation and
+      
+      ## Context Responsibilities and Non-Goals
+      Describe explicit responsibilities: expose authenticated endpoints for order commands, handle command-side persistence to MySQL, and publish events for downstream consumers. C
+
+  - id: context-map
+    title: "Context Map"
+    description: |
+      ## Internal Service Interactions
+      Map the interaction between services inside the Order Management bounded context: OrderApi (upstream HTTP boundary) publishes commands to RabbitMQ; OrderWorker (downstre
+      
+      ## Upstream/Downstream Relationships
+      Explain that external HTTP clients (e.g., frontends, testing tools) are upstream to OrderApi, while potential future read model services would be downstream from the worker through ev
+
+  - id: domain-model
+    title: "Domain Model"
+    description: |
+      ## Entities and Aggregate Root
+      Document Order as the primary domain entity and aggregate root, identified by OrderId. Describe its attributes (CustomerId, Amount, CreatedAt) and how they model the minimal information for this domain. Explain that all command-side behavior fo
+      
+      ## Value Objects
+      Explain that this sample does not implement explicit value object types (e.g., Money, CustomerId types); instead it uses primitive types (string, decimal, Guid). Suggest that in a more advanced version, Amount could be modeled as a Money value ot
+      
+      ## Repository and Factory Patterns
+      Describe how DotnetDbContext acts as a repository-like abstraction over the Orders table using EF Core. The CreateOrderConsumer effectively combines factory and repository responsibilities: it materializes a new Order entity from the command a
+      
+      ## Class Diagram Description
+      Provide a textual class diagram: OrderController depends on IPublishEndpoint and IBackgroundJobClient; CreateOrderConsumer and DeleteOrderConsumer both implement IConsumer<T> and depend on DotnetDbContext (for Create) or only the M
+
+  - id: domain-event-catalogue
+    title: "Domain Event Catalogue"
+    description: |
+      ## OrderCreated Event
+      Document the semantics of OrderCreated: it represents the fact that an order has been successfully created and persisted. List its fields (OrderId, CustomerId, Amount, CreatedAt) and describe typical consumers (e.g., reporting, notifications, read m
+      
+      ## OrderDeleted Event
+      Describe OrderDeleted: it represents a logical deletion of an order, including who initiated the deletion via RemovedBy and when it was processed. List fields (OrderId, CustomerId, Amount, RemovedBy, CreatedAt) and explain that CreateAt here is t
+      
+      ## Event Versioning and Compatibility Considerations
+      Note that events are defined as simple records without explicit versioning metadata. Recommend strategies for future evolution, such as adding optional fields, using multiple event types for breaking changes, or including a Version property. Highlig
+
+  - id: clean-architecture-view
+    title: "Clean Architecture View"
+    description: |
+      ## Layered Structure Overview
+      Describe a conceptual clean architecture view: at the outermost layer are infrastructure concerns (RabbitMQ, MySQL, Hangfire); the next layer comprises the API and worker hosts wired up via Program.cs/Host.CreateDefaultBuilder; the inner layer i
+      
+      ## Dependency Direction
+      Explain that Contracts is referenced by both OrderApi and OrderWorker, but does not reference them, enforcing a dependency rule where the domain contracts are more central. Within each service, controllers depend on abstractions like IPublishEn
+      
+      ## Infrastructure Adapters
+      Describe infrastructure adapters: MassTransit consumers as adapters from the message bus into domain behavior; OrderController as an adapter from HTTP into domain commands; DotnetDbContext as an adapter from domain entities into the MyS
+
+      ```mermaid
+      graph TD
+        Client[Client] --> Api[OrderApi]
+        Api --> Contracts[Contracts]
+        Worker[OrderWorker] --> Contracts
+        Api --> Infra[Infrastructure]
+        Worker --> Infra
+        Infra --> RabbitMQ[RabbitMQ]
+        Infra --> MySQL[MySQL]
+        Infra --> Hangfire[Hangfire]
+      ```
+
+  - id: sequence-diagram
+    title: "Sequence Diagram: Controller to Worker to Persistence (and Read Model Placeholder)"
+    description: |
+      ## Create Order Flow
+      Describe, in sequence form, the Create order flow: (1) Client sends POST /api/order/create with CreateOrderDto and JWT token; (2) OrderController validates authentication, constructs a CreateOrder command, and publishes it via IPublishEndpoint;
+      
+      ## Delete Order Flow
+      Describe the Delete order sequence: Client calls POST /api/order/delete; OrderController constructs and publishes DeleteOrder; DeleteOrderConsumer receives it, logs, simulates processing delay (Task.Delay), publishes OrderDeleted; potential dow
+      
+      ## Read Model Placeholder
+      Clarify that there is currently no explicit read model implemented. However, describe how a hypothetical read model service would subscribe to OrderCreated and OrderDeleted events and maintain a query-optimized projection (e.g., in another data
+
+      ```mermaid
+      sequenceDiagram
+        participant Client
+        participant OrderApi
+        participant RabbitMQ
+        participant OrderWorker
+        participant MySQL
+        Client->>OrderApi: POST /api/order/create
+        OrderApi->>RabbitMQ: Publish CreateOrder
+        RabbitMQ->>OrderWorker: Consume CreateOrder
+        OrderWorker->>MySQL: Persist Order
+        OrderWorker-->>RabbitMQ: Publish OrderCreated
+        OrderApi-->>Client: 202 Accepted
+      ```
+
+  - id: event-stream
+    title: "Event Stream (Synchronous & Asynchronous Aspects)"
+    description: |
+      ## Synchronous HTTP Layer
+      Explain that the entry to the system is synchronous: HTTP clients interact with OrderApi over REST. The controller performs minimal synchronous work (validation, command construction, publishing, job scheduling) and then returns immediately, ma
+      
+      ## Asynchronous Command Processing
+      Describe the asynchronous nature of command handling: commands are published to RabbitMQ and stored in queues; the worker consumes commands at its own pace, which decouples API availability from worker processing throughput. Note how
+      
+      ## Event Publication and Consumption
+      Detail how OrderCreated and OrderDeleted are published asynchronously after processing. These events form an event stream for each order, which downstream services can consume to build projections, send notifications, or integrate with exter
+
+  - id: glossary
+    title: "Glossary (Ubiquitous Language and Core Terms)"
+    description: |
+      ## Core Domain Terms
+      Define core domain terms used across code and docs: • Order – a record representing a customer's purchase, identified by OrderId and containing CustomerId, Amount, and CreatedAt. • Customer – the actor identified by CustomerId who owns an
+      
+      ## Technical Terms
+      Define key technical terms as used in the project: • Command – a message representing an intention to change state (CreateOrder, DeleteOrder). • Event – a message representing a fact that something happened (OrderCreated, OrderDeleted). • Co
+      
+      ## Security and Infrastructure Terms
+      Clarify additional ubiquitous terms: • JWT Issuer/Audience – configuration values that specify the trusted token source and intended audience for tokens. • Signing key – the secret used to sign and validate JWT tokens. • Connection string – text co
+# Coretax Domain Architecture: LLM Instruction Manual
+
+name: dot-net-cqrs-2
+title: "Coretax Technical Documentation"
+description: "Coretax DDD + Clean Architecture instruction manual"
+template: architecture.md
+
+intro: |
+  **Version**: 1.0  
+  **Domain**: Tax Management System (Coretax)  
+  **Architecture Style**: Domain-Driven Design (DDD) + Clean Architecture  
+  **Date**: 2026-02-02
+
+sections:
+  - id: bounded-context-definition
+    title: "Bounded Context Definition"
+    prompt: |
+      Generate a Bounded Context Definition document with the following structure for EACH context:
+      
+      ### Template Per Context
+      
+      **Context Name**: [Domain-specific, e.g., "Assessment Context", "Payment Context"]
+      
+      **Responsibility**:
+      2-3 sentences defining what this context owns and controls exclusively.
+      
+      **Domain Logic Richness**:
+      Classify as High / Medium / Low regarding business rules complexity
+      
+      **Ubiquitous Language**:
+      List 5-7 key terms with definitions specific to THIS context only:
+      - Term 1: Definition
+      - Term 2: Definition
+      ...
+      
+      **Inbound Communications**:
+      | Source Context | Data Exchanged | Integration Method |
+      |---|---|---|
+      | Context A | Taxpayer ID, Period | REST API |
+      
+      **Outbound Communications**:
+      | Target Context | Data Exchanged | Integration Method |
+      |---|---|---|
+      | Context B | Assessment Amount | Domain Event |
+      
+      **Team Ownership**:
+      Suggested team structure or domain expertise required
+      
+      **Translation Map**:
+      Show how terms change across boundaries:
+      - "Taxpayer" (Context A) → "Client" (Context B)
+      - "Assessment" (Context A) → "Invoice" (Context B)
+      
+      ### Required Bounded Contexts (Minimum 6)
+      
+      1. **Taxpayer Management Context** (Core Domain)
+         - Registration, profile management, eligibility rules
+      
+      2. **Assessment & Calculation Context** (Core Domain)
+         - Tax computation algorithms, liability determination
+      
+      3. **Payment Processing Context** (Core Domain)
+         - Transaction handling, reconciliation, allocations
+      
+      4. **Compliance & Audit Context** (Supporting Domain)
+         - Rules validation, audit trails, fraud detection
+      
+      5. **Notification & Communication Context** (Generic Domain)
+         - Email/SMS delivery, document generation
+      
+      6. **Reporting & Analytics Context** (Supporting Domain)
+         - Regulatory reports, dashboards, data warehouse
+      
+      ### Classification Tags
+      Tag each context with DDD category:
+      - **Core Domain**: Competitive advantage, complex business logic
+      - **Supporting Domain**: Required but not differentiating
+      - **Generic Domain**: Commodity capability (e.g., notifications)
+
+  - id: context-map
+    title: "Context Map"
+    prompt: |
+      Generate a Context Map using the following relationship types:
+      
+      ### Relationship Taxonomy
+      - **Customer-Supplier**: Upstream provides requirements to downstream
+      - **Partnership**: Mutual dependency between contexts
+      - **Shared Kernel**: Common model shared between contexts (minimize)
+      - **Conformist**: Downstream accepts upstream model without translation
+      - **Anti-Corruption Layer (ACL)**: Downstream protects with translation layer
+      - **Open Host Service**: Upstream provides published language for consumers
+      - **Published Language**: Well-documented shared protocol
+      
+      ### Output Structure
+      
+      #### 1. Visual Layout Description
+      Describe the diagram layout:
+      - Center: Core Domain contexts (Assessment, Payment)
+      - Satellites: Supporting contexts
+      - Periphery: External systems (Banking, Government APIs)
+      
+      #### 2. Connection Matrix
+      | Source | Target | Relationship | Integration | SLA |
+      |---|---|---|---|---|
+      | Assessment | Reporting | Customer-Supplier | Events | Async |
+      | Payment | Banking | Conformist | REST API | Sync |
+      
+      #### 3. Translation Points
+      Where ACLs exist, describe:
+      - Translation complexity (Simple/Medium/Complex)
+      - Mapping rules (e.g., Legacy "Customer" → Coretax "Taxpayer")
+      - Validation rules at boundary
+      
+      #### 4. Critical Paths
+      Highlight synchronous dependencies that could create bottlenecks with ⚠️ symbol.
+      
+      ### Coretax Specific Mappings
+      - **Payment Context** → **Banking System**: Conformist (adopts banking terminology)
+      - **Assessment Context** → **Reporting Context**: Customer-Supplier (Assessment drives reporting requirements)
+      - **Taxpayer Management**: Open Host Service (consumed by multiple internal contexts)
+      - **External Government ID**: ACL required (translate external schema to internal)
+
+  - id: domain-model
+    title: "Domain Model"
+    prompt: |
+      Generate comprehensive Domain Model specifications:
+      
+      ### Aggregate Template
+      
+      #### Aggregate Root: [Name]
+      **Description**: Business invariants this aggregate protects
+      
+      **Entity**:
+      - **ID Strategy**: UUID / Database Sequence / Natural Key (TIN)
+      - **Properties**:
+        - `propertyName`: Type, ValidationRules, Immutable (Y/N)
+        - Example: `taxPeriodEnd`: LocalDate, Must be after start, Mutable
+      - **Behaviors**: Methods that change state with business logic
+        - `methodName(params)`: Preconditions, Postconditions, Events raised
+      
+      **Value Objects**:
+      | Name | Attributes | Validation | Immutability |
+      |---|---|---|---|
+      | Money | amount (BigDecimal), currency (Currency) | amount >= 0 | Yes |
+      | TaxPeriod | startDate, endDate, fiscalYear | end > start | Yes |
+      | TaxId | value (String), jurisdiction | Format regex | Yes |
+      | AuditInfo | createdAt, createdBy, version | Auto-generated | Partial |
+      
+      **Business Invariants**:
+      1. [Invariant statement]: Enforced by [mechanism]
+      2. Example: "A TaxAccount cannot have overlapping TaxReturns for same period": Enforced by TaxAccount aggregate method
+      
+      #### Repository Interface
+      ```java
+      // Example structure - language agnostic
+      interface TaxAccountRepository {
+          TaxAccount findById(TaxAccountId id);
+          TaxAccount findByTaxpayerId(TaxpayerId id, TaxPeriod period);
+          void save(TaxAccount account); // Includes optimistic locking
+          List<TaxAccount> findOverdueAccounts(LocalDate asOfDate);
+      }
+      ```
+
+  - id: domain-event-catalogue
+    title: "Domain Event Catalogue"
+    prompt: |
+      List and describe domain events observed in the codebase:
+      - Event name
+      - Triggering aggregate/action
+      - Payload fields
+      - Synchronous/asynchronous delivery
+      - Downstream consumers
+
+  - id: clean-architecture-diagram
+    title: "Clean Architecture Diagram"
+    prompt: |
+      Provide a Clean Architecture diagram description and, if possible, include
+      a Mermaid diagram showing layers (UI, Application, Domain, Infrastructure)
+      and the dependency direction.
+
+  - id: sequence-controller-readmodel
+    title: "Sequence Diagram (Controller → Read Model)"
+    prompt: |
+      Provide a sequence diagram from controller to read model.
+      Use Mermaid sequence diagram syntax if possible.
+
+  - id: event-stream-sync-async
+    title: "Event Stream (Sync & Async)"
+    prompt: |
+      Describe the event stream and classify interactions:
+      - Synchronous request/response
+      - Asynchronous event publish/consume
+      - Message broker queues/topics
+      - Ordering, retries, and idempotency if present
+
+  - id: ubiquitous-language-glossary
+    title: "Ubiquitous Language Glossary"
+    prompt: |
+      Provide a glossary of Coretax terms:
+      - Term
+      - Definition
+      - Context where used
+
+  - id: cross-cutting-consistency-rules
+    title: "Cross-Cutting Consistency Rules"
+    prompt: |
+      Enumerate consistency rules that apply across contexts:
+      - Data integrity constraints
+      - Consistency boundaries (eventual vs strong)
+      - Validation and audit requirements

@@ -1,0 +1,610 @@
+# Document Structure Configuration for .NET CQRS-style Projects
+# This defines the architecture-centric sections and their prompts for LLM synthesis
+
+name: dotnet-cqrs
+description: "Documentation structure for .NET CQRS-style order processing systems"
+template: architecture.md
+
+# Section definitions - each section will be synthesized by the LLM
+sections:
+  - id: architecture-overview
+    title: "Architecture and System Overview"
+    subsections:
+      - id: purpose-bounded-contexts
+        title: "High-level Purpose and Bounded Contexts"
+        prompt: |
+          Analyze the codebase and describe:
+          - The overall purpose of this repository
+          - The bounded contexts or logical components
+          - How they relate to CQRS patterns if applicable
+      
+      - id: component-responsibilities
+        title: "Component Responsibilities and Interactions"
+        prompt: |
+          Describe:
+          - What each major project/component is responsible for
+          - How they interact with each other
+          - The contracts/interfaces between them
+      
+      - id: tech-stack
+        title: "Technology Stack Summary"
+        prompt: |
+          Summarize the technology stack:
+          - Target framework versions
+          - Key NuGet packages and their purposes
+          - External services and integrations
+
+  - id: runtime-workflows
+    title: "Runtime Workflows and Message Flow"
+    subsections:
+      - id: create-order-flow
+        title: "End-to-End Create Order Flow"
+        prompt: |
+          Trace the complete flow for creating an order:
+          - Entry point (API endpoint)
+          - Authentication/authorization
+          - Command creation and publishing
+          - Consumer processing
+          - Database operations
+          - Event publication
+      
+      - id: delete-order-flow
+        title: "End-to-End Delete Order Flow"
+        prompt: |
+          Trace the complete flow for deleting an order:
+          - Entry point (API endpoint)
+          - Authentication/authorization
+          - Command creation and publishing
+          - Consumer processing
+          - Database operations
+          - Event publication
+      
+      - id: service-lifecycle
+        title: "Service Startup and Hosting Lifecycle"
+        prompt: |
+          Describe how services start and run:
+          - Web host configuration
+          - Background service registration
+          - Middleware pipeline
+          - Consumer attachment to message bus
+
+  - id: projects-boundaries
+    title: "Projects and Service Boundaries"
+    subsections:
+      - id: contracts-project
+        title: "Contracts Project"
+        prompt: |
+          Describe the Contracts project:
+          - Its purpose as a shared library
+          - The message types defined (commands, events)
+          - The structure and properties of each contract
+      
+      - id: orderapi-project
+        title: "OrderApi Web API Project"
+        prompt: |
+          Describe the OrderApi project:
+          - Its role as the HTTP API entry point
+          - Controllers and endpoints
+          - Dependencies and integrations
+          - Hangfire/background job configuration
+      
+      - id: orderworker-project
+        title: "OrderWorker Background Service Project"
+        prompt: |
+          Describe the OrderWorker project:
+          - Its role as a background service
+          - Message consumers
+          - Database context and entities
+          - How it processes commands and publishes events
+
+  - id: messaging-integration
+    title: "Messaging and Integration (MassTransit + RabbitMQ)"
+    subsections:
+      - id: masstransit-config
+        title: "MassTransit Configuration"
+        prompt: |
+          Describe the MassTransit configuration:
+          - RabbitMQ connection details
+          - Endpoint configuration
+          - Consumer registration
+      
+      - id: command-event-design
+        title: "Command and Event Design"
+        prompt: |
+          Describe how commands and events are designed:
+          - Naming conventions
+          - Property types and serialization
+          - Immutability patterns
+      
+      - id: publish-send-semantics
+        title: "Publish vs Send Semantics"
+        prompt: |
+          Explain the messaging patterns:
+          - When Publish is used
+          - When Send is used
+          - Send endpoint configuration
+
+  - id: persistence
+    title: "Persistence and Data Model (EF Core + MySQL)"
+    subsections:
+      - id: entity-mapping
+        title: "Order Entity and Schema Mapping"
+        prompt: |
+          Describe the data model:
+          - Entity classes and their properties
+          - Table mappings and configurations
+          - Primary keys and relationships
+      
+      - id: dbcontext-config
+        title: "DbContext and Connection Configuration"
+        prompt: |
+          Describe database configuration:
+          - DbContext registration
+          - Connection string handling
+          - Provider configuration (Pomelo MySQL)
+
+  - id: background-jobs
+    title: "Background Jobs (Hangfire Integration)"
+    subsections:
+      - id: hangfire-config
+        title: "Hangfire Configuration in OrderApi"
+        prompt: |
+          Describe Hangfire setup:
+          - Storage configuration
+          - Server options
+          - Dashboard configuration
+      
+      - id: job-scheduling
+        title: "Job Scheduling from OrderController"
+        prompt: |
+          Describe how jobs are scheduled:
+          - Job client injection
+          - Job types and triggers
+          - Job payloads
+
+  - id: auth-api
+    title: "Authentication, Authorization, and API Surface"
+    subsections:
+      - id: jwt-pipeline
+        title: "JWT Authentication Pipeline"
+        prompt: |
+          Describe JWT authentication setup:
+          - Token validation parameters
+          - Key configuration
+          - Token expiration
+      
+      - id: auth-controller
+        title: "AuthController and Token Issuance"
+        prompt: |
+          Describe the authentication endpoint:
+          - Login endpoint
+          - Credential validation
+          - Token generation
+      
+      - id: order-controller
+        title: "OrderController Endpoints and Authorization"
+        prompt: |
+          Describe order endpoints:
+          - Available endpoints and their DTOs
+          - Authorization requirements
+          - Request/response patterns
+
+  - id: deployment
+    title: "Deployment, Configuration, and Operations"
+    subsections:
+      - id: external-deps
+        title: "External Dependencies and Environment Requirements"
+        prompt: |
+          List external dependencies:
+          - Required services (RabbitMQ, MySQL)
+          - Connection details and credentials
+          - Network requirements
+      
+      - id: runbook
+        title: "Service Startup and Runbook"
+        prompt: |
+          Describe operational procedures:
+          - Service startup order
+          - Health checks
+          - Common troubleshooting
+      
+      - id: observability
+        title: "Logging and Observability"
+        prompt: |
+          Describe logging and monitoring:
+          - Logging configuration
+          - Log levels and output
+          - Metrics and tracing
+
+  - id: security
+    title: "Security and Compliance Considerations"
+    prompt: |
+      Analyze security considerations:
+      - Authentication mechanism security
+      - Credential management
+      - Sensitive data handling
+      - Recommendations for production deployment
+
+# Display options
+show_file_reference: true
+show_integration_graph: true
+show_sequence_diagram: true
+# Document Structure Configuration for .NET CQRS-style Projects
+# This defines the architecture-centric sections and their prompts for LLM synthesis
+
+name: dotnet-cqrs
+title: "Architecture and System Overview"
+description: "Documentation structure for .NET CQRS-style order processing systems"
+show_toc: false
+template: architecture.md
+intro: |
+  # Architecture and System Overview
+
+  ## High-level Purpose and Bounded Contexts
+  This repository demonstrates a simple CQRS-style order processing flow split into three logical components: a Contracts library, an OrderApi ASP.NET Core Web API, and an OrderWorker background service.
+
+  ## Component Responsibilities and Interactions
+  The Contracts project defines shared messages (commands and events) used across the solution, ensuring both the API and worker agree on the wire contract. The OrderApi project is responsible for authentication and HTTP endpoints.
+
+  ## Technology Stack Summary
+  The solution targets .NET 8 across all projects. The OrderApi uses ASP.NET Core Web API, MassTransit with RabbitMQ, Hangfire with Hangfire.MySqlStorage, JWT bearer authentication, and Swashbuckle for Swagger.
+
+  # Runtime Workflows and Message Flow
+
+  ## End-to-End Create Order Flow
+  1) A client obtains a JWT token by calling the AuthController /api/auth/login endpoint with username and password. On success, the API issues a JWT valid for one hour.
+  2) The client then invokes POST /api/ord...
+
+  ## End-to-End Delete Order Flow
+  1) A client with a valid JWT calls POST /api/order/delete with a DeleteOrderDto including CustomerId, Amount, and RemovedBy. OrderController creates a new Guid for OrderId and builds a DeleteOrder command.
+
+  ## Service Startup and Hosting Lifecycle
+  OrderApi is configured via WebApplication.CreateBuilder and starts an ASP.NET Core web host with controllers, Swagger, authentication/authorization middleware, MassTransit configuration for RabbitMQ, and H...
+
+  # Projects and Service Boundaries
+
+  ## Contracts Project
+  The Contracts project is a .NET 8 class library encapsulating the message contracts used across the system. It defines four immutable C# records: CreateOrder, DeleteOrder, OrderCreated, and OrderDeleted.
+
+  ## OrderApi Web API Project
+  OrderApi is an ASP.NET Core Web API project that references the Contracts project. It exposes HTTP endpoints for authentication and order commands, and integrates Hangfire for background jobs and MassTra...
+
+  ## OrderWorker Background Service Project
+  OrderWorker is a .NET 8 worker service project that also references the Contracts project. It configures EF Core with a Pomelo MySQL provider using a hard-coded connection string pointing at server=localhost;...
+
+  # Messaging and Integration (MassTransit + RabbitMQ)
+
+  ## MassTransit Configuration
+  OrderApi configures MassTransit with AddMassTransit and UsingRabbitMq, pointing to host 10.254.214.145 on virtual host / with username efaktur and password efaktur. No explicit endpoints or consumers are re...
+
+  ## Command and Event Design
+  Commands (CreateOrder, DeleteOrder) and events (OrderCreated, OrderDeleted) are implemented as simple record types with primitive property types, ensuring easy serialization across the RabbitMQ transport.
+
+  ## Publish vs Send Semantics
+  OrderController demonstrates both MassTransit send and publish mechanisms through commented and active code. The commented-out Send example uses ISendEndpointProvider.GetSendEndpoint with an exp...
+
+  # Persistence and Data Model (EF Core + MySQL)
+
+  ## Order Entity and Schema Mapping
+  The Order entity in OrderWorker.Data has properties OrderId (Guid), CustomerId (string), Amount (decimal), and CreatedAt (DateTime). DotnetDbContext exposes a DbSet<Order> as Orders and in OnModelCreat...
+
+  ## DbContext and Connection Configuration
+  DotnetDbContext is registered in OrderWorker with AddDbContext, using UseMySql and ServerVersion.AutoDetect against a hard-coded connection string server=localhost;port=3306;database=dotnetdb;user=...
+
+  # Background Jobs (Hangfire Integration)
+
+  ## Hangfire Configuration in OrderApi
+  Program.cs wires Hangfire into OrderApi by calling AddHangfire with UseStorage(new MySqlStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new MySqlStorageOptions { TablesPrefix = ...
+
+  ## Job Scheduling from OrderController
+  In the create order endpoint, OrderController uses an injected IBackgroundJobClient to schedule a job after successfully publishing a CreateOrder command. The job is defined as a simple Console.WriteLine("He.."
+
+  # Authentication, Authorization, and API Surface
+
+  ## JWT Authentication Pipeline
+  OrderApi's Program.cs configures JWT bearer authentication. It reads jwt settings from configuration via builder.Configuration.GetSection("jwt"), obtains the signing key bytes from jwtSettings["key"], and sets To...
+
+  ## AuthController and Token Issuance
+  AuthController exposes POST /api/auth/login. It accepts a LoginRequest containing Username and Password. Credentials are hard-coded; if Username is not admin or Password is not password, the controller ret...
+
+  ## OrderController Endpoints and Authorization
+  OrderController is annotated with [Authorize], ensuring that only requests with a valid JWT token can access its endpoints. It defines two endpoints: POST /api/order/create, which accepts CreateOrderDto(Custo...
+
+  # Deployment, Configuration, and Operations
+
+  ## External Dependencies and Environment Requirements
+  To run the system end-to-end, three external components are required: a RabbitMQ broker reachable at 10.254.214.145 on virtual host / with credentials efaktur/efaktur (as configured in both OrderApi and OrderV...
+
+  ## Service Startup and Runbook
+  Operationally, RabbitMQ and MySQL should be started first and confirmed reachable. OrderWorker should be run next (dotnet run in the OrderWorker project) so that its consumers attach to the bus and are read...
+
+  ## Logging and Observability
+  Observability in this demo is handled primarily via console logging. CreateOrderConsumer and DeleteOrderConsumer log receipt of commands, completion of database saves, and publication of events. Worker.c...
+
+  # Security and Compliance Considerations
+
+  The authentication scheme is intended for demonstration: credentials are hard-coded (admin/password) and the JWT signing key is loaded directly from configuration without rotation or secret management abst...
+
+# Section definitions - each section will be synthesized by the LLM
+sections:
+  - id: architecture-overview
+    title: "Architecture and System Overview"
+    subsections:
+      - id: purpose-bounded-contexts
+        title: "High-level Purpose and Bounded Contexts"
+        prompt: |
+          Analyze the codebase and describe:
+          - The overall purpose of this repository
+          - The bounded contexts or logical components
+          - How they relate to CQRS patterns if applicable
+      
+      - id: component-responsibilities
+        title: "Component Responsibilities and Interactions"
+        prompt: |
+          Describe:
+          - What each major project/component is responsible for
+          - How they interact with each other
+          - The contracts/interfaces between them
+      
+      - id: tech-stack
+        title: "Technology Stack Summary"
+        prompt: |
+          Summarize the technology stack:
+          - Target framework versions
+          - Key NuGet packages and their purposes
+          - External services and integrations
+
+  - id: runtime-workflows
+    title: "Runtime Workflows and Message Flow"
+    subsections:
+      - id: create-order-flow
+        title: "End-to-End Create Order Flow"
+        prompt: |
+          Trace the complete flow for creating an order:
+          - Entry point (API endpoint)
+          - Authentication/authorization
+          - Command creation and publishing
+          - Consumer processing
+          - Database operations
+          - Event publication
+      
+      - id: delete-order-flow
+        title: "End-to-End Delete Order Flow"
+        prompt: |
+          Trace the complete flow for deleting an order:
+          - Entry point (API endpoint)
+          - Authentication/authorization
+          - Command creation and publishing
+          - Consumer processing
+          - Database operations
+          - Event publication
+      
+      - id: service-lifecycle
+        title: "Service Startup and Hosting Lifecycle"
+        prompt: |
+          Describe how services start and run:
+          - Web host configuration
+          - Background service registration
+          - Middleware pipeline
+          - Consumer attachment to message bus
+
+  - id: projects-boundaries
+    title: "Projects and Service Boundaries"
+    subsections:
+      - id: contracts-project
+        title: "Contracts Project"
+        prompt: |
+          Describe the Contracts project:
+          - Its purpose as a shared library
+          - The message types defined (commands, events)
+          - The structure and properties of each contract
+      
+      - id: orderapi-project
+        title: "OrderApi Web API Project"
+        prompt: |
+          Describe the OrderApi project:
+          - Its role as the HTTP API entry point
+          - Controllers and endpoints
+          - Dependencies and integrations
+          - Hangfire/background job configuration
+      
+      - id: orderworker-project
+        title: "OrderWorker Background Service Project"
+        prompt: |
+          Describe the OrderWorker project:
+          - Its role as a background service
+          - Message consumers
+          - Database context and entities
+          - How it processes commands and publishes events
+
+  - id: messaging-integration
+    title: "Messaging and Integration (MassTransit + RabbitMQ)"
+    subsections:
+      - id: masstransit-config
+        title: "MassTransit Configuration"
+        prompt: |
+          Describe the MassTransit configuration:
+          - RabbitMQ connection details
+          - Endpoint configuration
+          - Consumer registration
+      
+      - id: command-event-design
+        title: "Command and Event Design"
+        prompt: |
+          Describe how commands and events are designed:
+          - Naming conventions
+          - Property types and serialization
+          - Immutability patterns
+      
+      - id: publish-send-semantics
+        title: "Publish vs Send Semantics"
+        prompt: |
+          Explain the messaging patterns:
+          - When Publish is used
+          - When Send is used
+          - Send endpoint configuration
+
+  - id: persistence
+    title: "Persistence and Data Model (EF Core + MySQL)"
+    subsections:
+      - id: entity-mapping
+        title: "Order Entity and Schema Mapping"
+        prompt: |
+          Describe the data model:
+          - Entity classes and their properties
+          - Table mappings and configurations
+          - Primary keys and relationships
+      
+      - id: dbcontext-config
+        title: "DbContext and Connection Configuration"
+        prompt: |
+          Describe database configuration:
+          - DbContext registration
+          - Connection string handling
+          - Provider configuration (Pomelo MySQL)
+
+  - id: background-jobs
+    title: "Background Jobs (Hangfire Integration)"
+    subsections:
+      - id: hangfire-config
+        title: "Hangfire Configuration in OrderApi"
+        prompt: |
+          Describe Hangfire setup:
+          - Storage configuration
+          - Server options
+          - Dashboard configuration
+      
+      - id: job-scheduling
+        title: "Job Scheduling from OrderController"
+        prompt: |
+          Describe how jobs are scheduled:
+          - Job client injection
+          - Job types and triggers
+          - Job payloads
+
+  - id: auth-api
+    title: "Authentication, Authorization, and API Surface"
+    subsections:
+      - id: jwt-pipeline
+        title: "JWT Authentication Pipeline"
+        prompt: |
+          Describe JWT authentication setup:
+          - Token validation parameters
+          - Key configuration
+          - Token expiration
+      
+      - id: auth-controller
+        title: "AuthController and Token Issuance"
+        prompt: |
+          Describe the authentication endpoint:
+          - Login endpoint
+          - Credential validation
+          - Token generation
+      
+      - id: order-controller
+        title: "OrderController Endpoints and Authorization"
+        prompt: |
+          Describe order endpoints:
+          - Available endpoints and their DTOs
+          - Authorization requirements
+          - Request/response patterns
+
+  - id: deployment
+    title: "Deployment, Configuration, and Operations"
+    subsections:
+      - id: external-deps
+        title: "External Dependencies and Environment Requirements"
+        prompt: |
+          List external dependencies:
+          - Required services (RabbitMQ, MySQL)
+          - Connection details and credentials
+          - Network requirements
+      
+      - id: runbook
+        title: "Service Startup and Runbook"
+        prompt: |
+          Describe operational procedures:
+          - Service startup order
+          - Health checks
+          - Common troubleshooting
+      
+      - id: observability
+        title: "Logging and Observability"
+        prompt: |
+          Describe logging and monitoring:
+          - Logging configuration
+          - Log levels and output
+          - Metrics and tracing
+
+  - id: security
+    title: "Security and Compliance Considerations"
+    prompt: |
+      Analyze security considerations:
+      - Authentication mechanism security
+      - Credential management
+      - Sensitive data handling
+      - Recommendations for production deployment
+
+  - id: domain-architecture-addendum
+    title: "Domain Architecture Addendum"
+    description: |
+      1. Bounded Context Definiton
+      2. Context Map
+      3. Domain Model (entities, value Object, aggregate, repository and factory, class diagram)
+      4. Domain event cataloug
+      5. Clean Arch Diagram
+      6. Sequence diagram from controller to readmodel
+      7. Event Stream (synch & asynch)
+      8. Glosarium (ubiqoitos) Coretax
+
+  - id: context-map
+    title: "Context Map"
+    description: |
+      Context Map
+
+  - id: domain-model
+    title: "Domain Model (entities, value Object, aggregate, repository and factory, class diagram)"
+    description: |
+      Domain Model (entities, value Object, aggregate, repository and factory, class diagram)
+
+  - id: domain-event-catalog
+    title: "Domain event cataloug"
+    description: |
+      Domain event cataloug
+
+  - id: clean-arch-diagram
+    title: "Clean Arch Diagram"
+    description: |
+      Clean Arch Diagram
+
+  - id: controller-to-readmodel-sequence
+    title: "Sequence diagram from controller to readmodel"
+    description: |
+      ```mermaid
+      sequenceDiagram
+        participant Client
+        participant Controller
+        participant Handler
+        participant ReadModel
+        Client->>Controller: Request
+        Controller->>Handler: Handle query
+        Handler->>ReadModel: Query projection
+        ReadModel-->>Handler: Result
+        Handler-->>Controller: Result
+        Controller-->>Client: Response
+      ```
+
+  - id: event-stream
+    title: "Event Stream (synch & asynch)"
+    description: |
+      Event Stream (synch & asynch)
+
+  - id: glossary-coretax
+    title: "Glosarium (ubiqoitos) Coretax"
+    description: |
+      Glosarium (ubiqoitos) Coretax
+
+# Display options
+show_file_reference: true
+show_integration_graph: true
+show_sequence_diagram: true

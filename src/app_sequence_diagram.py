@@ -138,7 +138,12 @@ def build_app_sequence_diagram(
 
 
 def _safe_id(value: str) -> str:
-    return re.sub(r"[^\w]", "_", value)[:50] or "node"
+    cleaned = re.sub(r"[^\w]", "_", str(value or ""))[:50]
+    if not cleaned:
+        return "node"
+    if re.match(r"^\d", cleaned):
+        return f"node_{cleaned}"
+    return cleaned
 
 
 def _pick_dep(deps: List[str], suffixes: tuple) -> Optional[str]:
@@ -150,7 +155,7 @@ def _pick_dep(deps: List[str], suffixes: tuple) -> Optional[str]:
 
 def _safe_message(label: str) -> str:
     cleaned = (label or "").replace("\n", " ").strip()
-    cleaned = re.sub(r"[\"<>`]", "", cleaned)
+    cleaned = re.sub(r"[\[\]\"<>`|:]", "", cleaned)
     cleaned = cleaned.replace("/", " ").replace("\\", " ")
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if not cleaned:

@@ -1,0 +1,18 @@
+{
+  "include": [
+    "src",
+    "app.py",
+    "main.py",
+    "test_cli.py",
+    "regression_test.py"
+  ],
+  "exclude": [
+    "assets",
+    "dotnet-cqrs-master",
+    "example-dependency",
+    "examples",
+    "integration-doc",
+    "templates",
+    "tech-doc-ibmc-architecture.html"
+  ]
+}

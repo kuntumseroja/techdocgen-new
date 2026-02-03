@@ -1,0 +1,119 @@
+# Generic Document Structure Configuration
+# This is a flexible template that works for most project types
+# Copy and modify this file for specific project types
+
+name: generic
+title: "Architecture and System Overview"
+description: "Generic architecture documentation structure for any project"
+template: architecture.md
+
+# Section definitions - each section will be synthesized by the LLM
+sections:
+  - id: overview
+    title: "Architecture and System Overview"
+    subsections:
+      - id: purpose
+        title: "Purpose and Goals"
+        prompt: |
+          Describe the purpose and goals of this codebase:
+          - What problem does it solve?
+          - Who are the target users?
+          - What are the key features?
+      
+      - id: components
+        title: "Component Architecture"
+        prompt: |
+          Describe the component architecture:
+          - What are the main components/modules?
+          - How are they organized?
+          - What are their responsibilities?
+      
+      - id: tech-stack
+        title: "Technology Stack"
+        prompt: |
+          Summarize the technology stack:
+          - Programming languages and frameworks
+          - Key libraries and dependencies
+          - External services and integrations
+
+  - id: workflows
+    title: "Key Workflows and Data Flow"
+    subsections:
+      - id: primary-flow
+        title: "Primary User Flow"
+        prompt: |
+          Describe the primary user workflow:
+          - Entry points
+          - Key operations
+          - Data transformations
+          - Output/results
+      
+      - id: data-flow
+        title: "Data Flow and Processing"
+        prompt: |
+          Describe how data flows through the system:
+          - Input handling
+          - Processing steps
+          - Storage and retrieval
+          - Output generation
+
+  - id: modules
+    title: "Modules and Components"
+    prompt: |
+      Provide an overview of each major module/component:
+      - What it does
+      - Key classes/functions
+      - Dependencies
+      - Configuration options
+
+  - id: api
+    title: "API and Interfaces"
+    subsections:
+      - id: public-api
+        title: "Public API"
+        prompt: |
+          Document the public API:
+          - Endpoints/methods available
+          - Input/output formats
+          - Authentication requirements
+      
+      - id: internal-interfaces
+        title: "Internal Interfaces"
+        prompt: |
+          Document internal interfaces:
+          - Key abstractions
+          - Contracts between components
+          - Extension points
+
+  - id: configuration
+    title: "Configuration and Deployment"
+    subsections:
+      - id: config-options
+        title: "Configuration Options"
+        prompt: |
+          Document configuration options:
+          - Configuration files
+          - Environment variables
+          - Runtime settings
+      
+      - id: deployment
+        title: "Deployment Guide"
+        prompt: |
+          Describe deployment requirements:
+          - Prerequisites
+          - Installation steps
+          - Environment setup
+
+  - id: security
+    title: "Security Considerations"
+    prompt: |
+      Analyze security considerations:
+      - Authentication and authorization
+      - Data protection
+      - Known limitations
+      - Recommendations
+
+# Display options
+show_file_reference: true
+show_integration_graph: true
+show_sequence_diagram: true

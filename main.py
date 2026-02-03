@@ -27,11 +27,27 @@ console = Console()
 @click.option('--stream', is_flag=True, help='Stream output to file (recommended for large repos)')
 @click.option('--domain', help='Domain profile name from config.yaml')
 @click.option('--all-domains', is_flag=True, help='Generate documentation for all domain profiles')
-def main(source, type, output, provider, config, branch, verbose, dep_map, dep_map_format, dep_map_output, stream, domain, all_domains):
+@click.option('--doc-structure', help='Document structure for architecture-centric docs (e.g., dotnet-cqrs, generic)')
+@click.option('--list-structures', is_flag=True, help='List available document structures')
+def main(source, type, output, provider, config, branch, verbose, dep_map, dep_map_format, dep_map_output, stream, domain, all_domains, doc_structure, list_structures):
     """Generate technical documentation from source code"""
     
     console.print("[bold blue]TechDocGen by IBMC[/bold blue]")
     console.print("[dim]Technical Documentation Generator[/dim]\n")
+    
+    # Handle --list-structures option
+    if list_structures:
+        try:
+            generator = DocumentationGenerator(config_path=config, llm_provider=provider)
+            structures = generator.get_available_doc_structures()
+            console.print("[bold]Available Document Structures:[/bold]\n")
+            for struct in structures:
+                console.print(f"  - {struct}")
+            console.print("\n[dim]Use --doc-structure <name> to generate architecture-centric documentation[/dim]")
+            return
+        except Exception as e:
+            console.print(f"[bold red]Error: {e}[/bold red]")
+            raise click.Abort()
     
     if not source and not domain and not all_domains:
         raise click.BadParameter("Provide --source or --domain/--all-domains")
@@ -85,6 +101,55 @@ def main(source, type, output, provider, config, branch, verbose, dep_map, dep_m
             
             output_file = generator.generate_from_domain(domain, output_path=output, streaming=stream)
             console.print(f"[bold green]✓ Documentation generated successfully![/bold green]")
+            console.print(f"[dim]Output: {output_file.absolute()}[/dim]\n")
+            return
+        
+        # Handle architecture-centric documentation with doc-structure
+        if doc_structure:
+            console.print(f"[dim]Using document structure: {doc_structure}[/dim]\n")
+            
+            def progress_callback(current, total, message):
+                progress.update(task, description=f"{message} ({current}/{total if total else '?'})")
+            
+            # Initialize reader
+            if source_type == 'file':
+                reader = generator._get_reader('file', source)
+            elif source_type == 'folder':
+                reader = generator._get_reader('folder', source)
+            elif source_type == 'git':
+                reader = generator._get_reader('git', source, branch)
+            else:
+                raise ValueError(f"Unknown source type: {source_type}")
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console
+            ) as progress:
+                task = progress.add_task("Reading source code...", total=None)
+                files = reader.read()
+                progress.update(task, description="Source code read")
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console
+            ) as progress:
+                task = progress.add_task("Generating architecture documentation...", total=None)
+                
+                documentation = generator.generate_architecture_docs_from_files(
+                    files,
+                    doc_structure_name=doc_structure,
+                    output_path=output,
+                    progress_callback=progress_callback
+                )
+                
+                progress.update(task, description="Documentation generated")
+                
+                # Save documentation
+                output_file = generator.save_documentation(documentation, output)
+            
+            console.print(f"\n[bold green]✓ Architecture documentation generated successfully![/bold green]")
             console.print(f"[dim]Output: {output_file.absolute()}[/dim]\n")
             return
         

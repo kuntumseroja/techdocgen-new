@@ -1,6 +1,7 @@
 """Technical documentation generator"""
 
 from typing import List, Dict, Any, Optional
+import re
 from pathlib import Path
 from datetime import datetime
 from copy import deepcopy
@@ -27,6 +28,7 @@ from .correlation_analyzer import build_correlation_signals, build_correlation_m
 from .call_graph_analyzer import build_csharp_class_call_graphs
 from .service_catalog import build_service_catalog
 from .app_sequence_diagram import build_app_sequence_diagram
+from .architecture_synthesizer import ArchitectureSynthesizer
 
 
 class DocumentationGenerator:
@@ -99,6 +101,25 @@ class DocumentationGenerator:
     def generate_docs_from_files(self, files: List[Dict[str, Any]], progress_callback=None) -> str:
         """Generate documentation from already-read files"""
         return self._generate_docs(files, progress_callback)
+
+    def generate_architecture_docs_from_files(
+        self,
+        files: List[Dict[str, Any]],
+        doc_structure_name: str = "generic",
+        output_path: Optional[str] = None,
+        progress_callback=None,
+        llm_override=None,
+        llm_provider_override: Optional[str] = None
+    ) -> str:
+        """Generate architecture-centric documentation from already-read files"""
+        return self._generate_architecture_docs(
+            files,
+            doc_structure_name=doc_structure_name,
+            output_path=output_path,
+            progress_callback=progress_callback,
+            llm_override=llm_override,
+            llm_provider_override=llm_provider_override
+        )
     
     def generate_docs_streaming(self, reader, output_path: str, progress_callback=None, llm_override=None, llm_provider_override: Optional[str] = None, chunk_size_chars: Optional[int] = None, chunk_overlap_chars: Optional[int] = None, parsers_override: Optional[Dict[str, Any]] = None) -> Path:
         """Generate documentation in streaming mode to handle large repos"""
@@ -599,11 +620,19 @@ class DocumentationGenerator:
             return None
         
         mermaid = ["```mermaid", "graph LR"]
+        added_nodes = set()
         for ex, ex_type in sorted(exchanges.items()):
-            label = f"{ex}\\n{ex_type}" if ex_type else ex
-            mermaid.append(f'  EX_{self._safe_id(ex)}["Exchange: {label}"]')
+            ex_label = self._safe_label(ex)
+            label = f"{ex_label} ({self._safe_label(ex_type)})" if ex_type else ex_label
+            node_id = f"EX_{self._safe_id(ex)}"
+            if node_id not in added_nodes:
+                mermaid.append(f'  {node_id}["Exchange {label}"]')
+                added_nodes.add(node_id)
         for q in sorted(queues.keys()):
-            mermaid.append(f'  Q_{self._safe_id(q)}["Queue: {q}"]')
+            node_id = f"Q_{self._safe_id(q)}"
+            if node_id not in added_nodes:
+                mermaid.append(f'  {node_id}["Queue {self._safe_label(q)}"]')
+                added_nodes.add(node_id)
         
         for bind in bindings:
             ex = bind.get("exchange")
@@ -611,25 +640,30 @@ class DocumentationGenerator:
             rk = bind.get("routing_key")
             if not ex or not q:
                 continue
-            label = f"rk:{rk}" if rk else ""
-            mermaid.append(f"  EX_{self._safe_id(ex)} -->|{label}| Q_{self._safe_id(q)}")
+            mermaid.append(f"  EX_{self._safe_id(ex)} --> Q_{self._safe_id(q)}")
         
         for pub in publishers:
             service = pub.get("service", "unknown")
             svc_id = self._safe_id(service)
-            mermaid.append(f'  S_{svc_id}["Service: {service}"]')
+            node_id = f"S_{svc_id}"
+            if node_id not in added_nodes:
+                mermaid.append(f'  {node_id}["Service {self._safe_label(service)}"]')
+                added_nodes.add(node_id)
             if pub.get("exchange"):
-                mermaid.append(f"  S_{svc_id} --> EX_{self._safe_id(pub['exchange'])}")
+                mermaid.append(f"  {node_id} --> EX_{self._safe_id(pub['exchange'])}")
             if pub.get("queue"):
-                mermaid.append(f"  S_{svc_id} --> Q_{self._safe_id(pub['queue'])}")
+                mermaid.append(f"  {node_id} --> Q_{self._safe_id(pub['queue'])}")
         
         for cons in consumers:
             service = cons.get("service", "unknown")
             svc_id = self._safe_id(service)
-            mermaid.append(f'  S_{svc_id}["Service: {service}"]')
+            node_id = f"S_{svc_id}"
+            if node_id not in added_nodes:
+                mermaid.append(f'  {node_id}["Service {self._safe_label(service)}"]')
+                added_nodes.add(node_id)
             queue = cons.get("queue")
             if queue:
-                mermaid.append(f"  Q_{self._safe_id(queue)} --> S_{svc_id}")
+                mermaid.append(f"  Q_{self._safe_id(queue)} --> {node_id}")
 
         for pub in message_publishers:
             message = pub.get("message")
@@ -638,8 +672,11 @@ class DocumentationGenerator:
                 continue
             msg_id = self._safe_id(f"MSG_{message}")
             svc_id = self._safe_id(service)
-            mermaid.append(f'  MSG_{msg_id}["Message: {message}"]')
-            mermaid.append(f"  S_{svc_id} --> MSG_{msg_id}")
+            msg_node = f"MSG_{msg_id}"
+            if msg_node not in added_nodes:
+                mermaid.append(f'  {msg_node}["Message {self._safe_label(message)}"]')
+                added_nodes.add(msg_node)
+            mermaid.append(f"  S_{svc_id} --> {msg_node}")
 
         for cons in message_consumers:
             message = cons.get("message")
@@ -648,9 +685,15 @@ class DocumentationGenerator:
                 continue
             msg_id = self._safe_id(f"MSG_{message}")
             cons_id = self._safe_id(consumer)
-            mermaid.append(f'  MSG_{msg_id}["Message: {message}"]')
-            mermaid.append(f'  C_{cons_id}["Consumer: {consumer}"]')
-            mermaid.append(f"  MSG_{msg_id} --> C_{cons_id}")
+            msg_node = f"MSG_{msg_id}"
+            cons_node = f"C_{cons_id}"
+            if msg_node not in added_nodes:
+                mermaid.append(f'  {msg_node}["Message {self._safe_label(message)}"]')
+                added_nodes.add(msg_node)
+            if cons_node not in added_nodes:
+                mermaid.append(f'  {cons_node}["Consumer {self._safe_label(consumer)}"]')
+                added_nodes.add(cons_node)
+            mermaid.append(f"  {msg_node} --> {cons_node}")
         
         mermaid.append("```")
         return "\n".join(mermaid)
@@ -658,6 +701,14 @@ class DocumentationGenerator:
     def _safe_id(self, value: str) -> str:
         """Create a safe Mermaid node id"""
         return "".join(ch if ch.isalnum() else "_" for ch in value)
+
+    def _safe_label(self, value: str) -> str:
+        text = str(value or "")
+        text = re.sub(r'[\[\]"`<>|]', '', text)
+        text = text.replace("\\", " ")
+        text = text.replace("\n", " ").replace("\r", " ")
+        text = re.sub(r"\s+", " ", text).strip()
+        return text or "label"
     
     def generate_from_domain(self, domain_name: str, output_path: Optional[str] = None, streaming: Optional[bool] = None) -> Path:
         """Generate documentation for a configured domain profile"""
@@ -691,6 +742,7 @@ class DocumentationGenerator:
             domain_config["languages"] = domain.get("languages")
         
         template_name = domain.get("template", self.template_name)
+        doc_structure_name = domain.get("doc_structure")
         streaming = doc_config.get("streaming_mode") if streaming is None else streaming
         output_path = output_path or domain.get("output") or str(Path("./docs") / f"{domain_name}_technical_docs.md")
         chunk_size_chars = doc_config.get("chunk_size_chars", self.chunk_size_chars)
@@ -702,6 +754,32 @@ class DocumentationGenerator:
         llm = self.llm if llm_provider == self.llm_provider else LLMFactory.create(llm_provider, domain_config)
         domain_parsers = self._build_parsers(domain_config)
         
+        # Check if domain uses architecture-centric documentation
+        doc_structure_name = domain.get("doc_structure")
+        
+        if doc_structure_name:
+            # Use architecture-centric documentation mode
+            files = reader.read()
+            documentation = self._generate_architecture_docs(
+                files,
+                doc_structure_name=doc_structure_name,
+                output_path=output_path,
+                llm_override=llm,
+                llm_provider_override=llm_provider
+            )
+            return self.save_documentation(documentation, output_path)
+        
+        if doc_structure_name:
+            files = reader.read()
+            documentation = self.generate_architecture_docs_from_files(
+                files,
+                doc_structure_name=doc_structure_name,
+                output_path=output_path,
+                llm_override=llm,
+                llm_provider_override=llm_provider
+            )
+            return self.save_documentation(documentation, output_path)
+
         if streaming:
             return self.generate_docs_streaming(
                 reader,
@@ -734,6 +812,240 @@ class DocumentationGenerator:
                 continue
             outputs.append(self.generate_from_domain(name))
         return outputs
+    
+    def generate_architecture_docs(
+        self,
+        source_path: str,
+        doc_structure_name: str = "generic",
+        output_path: Optional[str] = None,
+        progress_callback=None
+    ) -> str:
+        """
+        Generate architecture-centric documentation using document structure templates
+        
+        This method synthesizes documentation organized by architectural concerns
+        rather than by individual files.
+        
+        Args:
+            source_path: Path to source folder
+            doc_structure_name: Name of document structure (e.g., 'dotnet-cqrs', 'generic')
+            output_path: Optional output file path
+            progress_callback: Optional progress callback
+            
+        Returns:
+            Generated documentation string
+        """
+        # Read source files
+        reader = FolderReader(source_path, self.config.config)
+        files = reader.read()
+        
+        if not files:
+            return "# Architecture Documentation\n\n**TechDocGen by IBMC**\n\nNo source files found."
+        
+        return self._generate_architecture_docs(
+            files, doc_structure_name, output_path, progress_callback
+        )
+    
+    def _generate_architecture_docs(
+        self,
+        files: List[Dict[str, Any]],
+        doc_structure_name: str = "generic",
+        output_path: Optional[str] = None,
+        progress_callback=None,
+        llm_override=None,
+        llm_provider_override: Optional[str] = None
+    ) -> str:
+        """
+        Internal method to generate architecture documentation from files
+        
+        Args:
+            files: List of file dictionaries
+            doc_structure_name: Name of document structure
+            output_path: Optional output file path
+            progress_callback: Optional progress callback
+            llm_override: Optional LLM override
+            llm_provider_override: Optional LLM provider override
+            
+        Returns:
+            Generated documentation string
+        """
+        llm = llm_override or self.llm
+        llm_provider = llm_provider_override or self.llm_provider
+        model_name = getattr(llm, 'model', '')
+        
+        # Initialize architecture synthesizer
+        synthesizer = ArchitectureSynthesizer(llm, self.config.config)
+        
+        # Load document structure
+        try:
+            doc_structure = synthesizer.load_doc_structure(doc_structure_name)
+        except FileNotFoundError as e:
+            return f"# Error\n\nDocument structure not found: {e}"
+        
+        # Group files by language
+        files_by_language = {}
+        for file_info in files:
+            lang = file_info["language"]
+            if lang not in files_by_language:
+                files_by_language[lang] = []
+            files_by_language[lang].append(file_info)
+        
+        # Process files to get parsed info
+        processed_files_by_language = {}
+        messaging_flows = []
+        integration_records = []
+        
+        total_files = sum(len(lang_files) for lang_files in files_by_language.values() if lang_files)
+        processed_count = 0
+        
+        for language, lang_files in files_by_language.items():
+            if language == "unknown":
+                continue
+            
+            processed_files_by_language[language] = []
+            parser = self.parsers.get(language)
+            if not parser:
+                continue
+            
+            for file_info in lang_files:
+                processed_count += 1
+                file_name = file_info.get('name', 'Unknown')
+                
+                if progress_callback:
+                    progress_callback(processed_count, total_files, f"Parsing: {file_name}")
+                
+                try:
+                    parsed_info = parser.parse(file_info["content"])
+                    file_messaging = self._extract_messaging_flows(file_info["content"], language)
+                    
+                    if file_messaging:
+                        integration_records.append({
+                            "source_type": file_messaging.get("source_type"),
+                            "file": file_info.get("relative_path", file_info.get("path", "")),
+                            "flows": file_messaging
+                        })
+                        if file_messaging.get("flows"):
+                            for flow in file_messaging["flows"]:
+                                messaging_flows.append({
+                                    "queue": flow.get("queue"),
+                                    "consumers": flow.get("consumers", []),
+                                    "sagas": flow.get("sagas", []),
+                                    "file": file_info.get("relative_path", file_info.get("path", ""))
+                                })
+                    
+                    processed_files_by_language[language].append({
+                        "name": file_name,
+                        "path": file_info.get("path", ""),
+                        "relative_path": file_info.get("relative_path", file_info.get("path", "")),
+                        "parsed_info": parsed_info,
+                        "messaging_flows": file_messaging
+                    })
+                except Exception:
+                    processed_files_by_language[language].append({
+                        "name": file_name,
+                        "path": file_info.get("path", ""),
+                        "relative_path": file_info.get("relative_path", file_info.get("path", "")),
+                        "parsed_info": {"classes": [], "functions": [], "imports": []},
+                        "messaging_flows": None
+                    })
+        
+        # Build service catalog
+        service_catalog = build_service_catalog(
+            files,
+            self.dependency_analyzer if self.config.config.get("documentation", {}).get("include_dependency_map", False) else None
+        )
+        
+        # Build integration graph
+        integration_graph = self._build_integration_graph(integration_records)
+        
+        # Build app sequence diagram
+        message_types = []
+        for record in integration_records:
+            flows = record.get("flows", {})
+            if record.get("source_type") == "masstransit":
+                for msg in flows.get("publishes", []) or []:
+                    message_types.append({"message": msg, "service": record.get("file", "")})
+                for msg in flows.get("sends", []) or []:
+                    message_types.append({"message": msg, "service": record.get("file", "")})
+                for cons in flows.get("consumer_messages", []) or []:
+                    if cons.get("message"):
+                        message_types.append({"message": cons.get("message"), "consumer": cons.get("consumer", "")})
+        
+        app_sequence_diagram = build_app_sequence_diagram(
+            service_catalog,
+            messaging_flows,
+            message_types
+        )
+        
+        # Synthesize architecture documentation
+        if progress_callback:
+            progress_callback(processed_count, total_files, "Synthesizing architecture documentation...")
+        
+        synthesized_structure = synthesizer.synthesize(
+            doc_structure,
+            files,
+            processed_files_by_language,
+            service_catalog,
+            messaging_flows,
+            progress_callback
+        )
+        
+        # Prepare template context
+        template_context = {
+            "llm_provider": llm_provider,
+            "model_name": model_name,
+            "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total_files": total_files,
+            "files_by_language": processed_files_by_language,
+            "languages": [lang for lang in processed_files_by_language.keys() if lang != "unknown"],
+            "messaging_flows": messaging_flows,
+            "integration_graph": integration_graph if synthesized_structure.get('show_integration_graph', True) else None,
+            "service_catalog": service_catalog,
+            "app_sequence_diagram": app_sequence_diagram if synthesized_structure.get('show_sequence_diagram', True) else None,
+            "doc_structure": synthesized_structure,
+            "show_file_reference": synthesized_structure.get('show_file_reference', True)
+        }
+        
+        # Render template
+        template_name = doc_structure.get('template', 'architecture.md')
+        try:
+            documentation = self.template_engine.render(template_name, template_context)
+        except Exception as e:
+            # Fallback to basic output
+            documentation = self._fallback_architecture_render(synthesized_structure, template_context)
+        
+        return documentation
+    
+    def _fallback_architecture_render(
+        self,
+        doc_structure: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> str:
+        """Fallback rendering if template fails"""
+        parts = [
+            f"# {doc_structure.get('title', 'Architecture Documentation')}\n",
+            f"**Generated by:** TechDocGen by IBMC\n",
+            f"**Model Use:** {context.get('llm_provider', '')} {context.get('model_name', '')}\n",
+            f"**Generation Date:** {context.get('generation_date', '')}\n",
+            "---\n"
+        ]
+        
+        for section in doc_structure.get('sections', []):
+            parts.append(f"\n# {section.get('title', 'Section')}\n")
+            if section.get('content'):
+                parts.append(f"{section['content']}\n")
+            
+            for subsection in section.get('subsections', []):
+                parts.append(f"\n## {subsection.get('title', 'Subsection')}\n")
+                if subsection.get('content'):
+                    parts.append(f"{subsection['content']}\n")
+        
+        return '\n'.join(parts)
+    
+    def get_available_doc_structures(self) -> List[str]:
+        """Get list of available document structure configurations"""
+        synthesizer = ArchitectureSynthesizer(self.llm, self.config.config)
+        return synthesizer.get_available_structures()
     
     def save_documentation(self, documentation: str, output_path: Optional[str] = None) -> Path:
         """Save documentation to file"""

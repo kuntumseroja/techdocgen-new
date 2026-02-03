@@ -1,0 +1,210 @@
+# Document Structure Configuration for Microservices Architecture
+# This structure is designed for distributed systems with multiple services
+
+name: microservices
+description: "Documentation structure for microservices-based distributed systems"
+template: architecture.md
+
+sections:
+  - id: system-overview
+    title: "System Architecture Overview"
+    subsections:
+      - id: business-context
+        title: "Business Context and Domain"
+        prompt: |
+          Describe the business context:
+          - What business problem does this system solve?
+          - What are the key domain concepts?
+          - Who are the users/stakeholders?
+      
+      - id: architecture-style
+        title: "Architecture Style and Patterns"
+        prompt: |
+          Identify and describe the architectural patterns:
+          - Microservices vs monolith components
+          - Event-driven vs request-response patterns
+          - CQRS, Event Sourcing, Saga patterns if present
+      
+      - id: tech-stack
+        title: "Technology Stack"
+        prompt: |
+          Document the technology stack:
+          - Programming languages and frameworks per service
+          - Databases and storage solutions
+          - Message brokers and event buses
+          - Container/orchestration platforms
+
+  - id: services
+    title: "Service Inventory"
+    subsections:
+      - id: service-catalog
+        title: "Service Catalog"
+        prompt: |
+          Create a catalog of all services:
+          - Service name and purpose
+          - Owner/team responsibility
+          - Dependencies on other services
+          - SLA/availability requirements
+      
+      - id: api-contracts
+        title: "API Contracts and Interfaces"
+        prompt: |
+          Document service interfaces:
+          - REST endpoints and their operations
+          - gRPC services if present
+          - Message contracts (commands, events)
+      
+      - id: data-ownership
+        title: "Data Ownership and Boundaries"
+        prompt: |
+          Describe data boundaries:
+          - Which service owns which data?
+          - Database-per-service vs shared database
+          - Data synchronization strategies
+
+  - id: communication
+    title: "Inter-Service Communication"
+    subsections:
+      - id: sync-communication
+        title: "Synchronous Communication (HTTP/gRPC)"
+        prompt: |
+          Document synchronous communication:
+          - Service-to-service HTTP calls
+          - gRPC services
+          - Circuit breakers and timeouts
+          - Service discovery mechanism
+      
+      - id: async-communication
+        title: "Asynchronous Communication (Events/Messages)"
+        prompt: |
+          Document asynchronous communication:
+          - Message broker configuration
+          - Event types and their purposes
+          - Producer/consumer relationships
+          - Error handling and dead letter queues
+      
+      - id: data-consistency
+        title: "Data Consistency Patterns"
+        prompt: |
+          Describe consistency patterns:
+          - Eventual consistency handling
+          - Saga/choreography patterns
+          - Compensation/rollback mechanisms
+
+  - id: infrastructure
+    title: "Infrastructure and Deployment"
+    subsections:
+      - id: container-config
+        title: "Container and Orchestration"
+        prompt: |
+          Document containerization:
+          - Docker configuration
+          - Kubernetes/orchestration setup
+          - Service mesh if present
+      
+      - id: config-management
+        title: "Configuration Management"
+        prompt: |
+          Describe configuration:
+          - Environment variables
+          - Configuration files
+          - Secrets management
+          - Feature flags
+      
+      - id: scaling
+        title: "Scaling and Load Balancing"
+        prompt: |
+          Document scaling strategies:
+          - Horizontal/vertical scaling
+          - Load balancing
+          - Auto-scaling rules
+
+  - id: observability
+    title: "Observability and Monitoring"
+    subsections:
+      - id: logging
+        title: "Logging Strategy"
+        prompt: |
+          Describe logging:
+          - Log aggregation
+          - Log formats and correlation IDs
+          - Log levels and retention
+      
+      - id: metrics
+        title: "Metrics and Alerts"
+        prompt: |
+          Document metrics:
+          - Key performance indicators
+          - Health checks
+          - Alerting rules
+      
+      - id: tracing
+        title: "Distributed Tracing"
+        prompt: |
+          Describe tracing:
+          - Trace propagation
+          - Span collection
+          - Trace visualization
+
+  - id: resilience
+    title: "Resilience and Fault Tolerance"
+    subsections:
+      - id: failure-modes
+        title: "Failure Modes and Recovery"
+        prompt: |
+          Identify failure scenarios:
+          - Service unavailability
+          - Network partitions
+          - Database failures
+          - Message broker failures
+      
+      - id: patterns
+        title: "Resilience Patterns"
+        prompt: |
+          Document resilience patterns:
+          - Circuit breakers
+          - Retries with backoff
+          - Bulkheads
+          - Fallbacks
+
+  - id: security
+    title: "Security Architecture"
+    subsections:
+      - id: authentication
+        title: "Authentication and Authorization"
+        prompt: |
+          Describe auth mechanisms:
+          - Service-to-service authentication
+          - User authentication (JWT, OAuth)
+          - Authorization and access control
+      
+      - id: network-security
+        title: "Network Security"
+        prompt: |
+          Document network security:
+          - TLS/mTLS configuration
+          - Network policies
+          - API gateway security
+
+  - id: operations
+    title: "Operations and Runbook"
+    subsections:
+      - id: deployment
+        title: "Deployment Process"
+        prompt: |
+          Describe deployment:
+          - CI/CD pipeline
+          - Deployment strategies (blue-green, canary)
+          - Rollback procedures
+      
+      - id: troubleshooting
+        title: "Troubleshooting Guide"
+        prompt: |
+          Create troubleshooting guide:
+          - Common issues and solutions
+          - Debug procedures
+          - Support escalation
+
+show_file_reference: true
+show_integration_graph: true
+show_sequence_diagram: true
