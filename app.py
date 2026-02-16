@@ -350,6 +350,38 @@ def main():
         )
         st.session_state.doc_structure = None if selected_doc_structure == "Default (file-centric)" else selected_doc_structure
         
+        # FR-15 Probis/Domain selector (IF-01)
+        domain_profiles = config.config.get("domains", []) or []
+        domain_names = [d.get("name", "") for d in domain_profiles if d.get("name")]
+        probis_options = ["(None - use source below)"]
+        probis_options.extend(domain_names)
+        selected_probis = st.selectbox(
+            "📋 Probis/Domain (FR-15)",
+            options=probis_options,
+            index=0,
+            help="Select business domain for focused analysis. Define domains in config.yaml."
+        )
+        st.session_state.probis_domain = None if selected_probis == "(None - use source below)" else selected_probis
+        
+        # FR-14 Verbosity (IF-01): Concise vs Detailed
+        verbosity = st.selectbox(
+            "📝 Output Verbosity (FR-14)",
+            options=["concise", "detailed"],
+            index=1,
+            help="Concise = diagram-heavy, table summary. Detailed = full narrative with code refs."
+        )
+        st.session_state.verbosity = verbosity
+        
+        # Output format (IF-01): Markdown / PDF
+        output_format = st.radio(
+            "📄 Output Format",
+            options=["Markdown", "PDF", "Both"],
+            index=0,
+            horizontal=True,
+            help="Markdown, PDF, or both"
+        )
+        st.session_state.output_format = output_format.lower()
+        
         # Provider-specific settings
         if selected_provider == 'ollama':
             st.markdown("#### Ollama Settings")

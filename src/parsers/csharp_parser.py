@@ -1,4 +1,4 @@
-"""C# (.NET) code parser"""
+"""C# (.NET) code parser - SRS FR-01, FR-02, FR-03: CQRS/DDD, MassTransit, EF Core"""
 
 import re
 from typing import Dict, List, Any
@@ -6,19 +6,103 @@ from .base_parser import BaseParser
 
 
 class CSharpParser(BaseParser):
-    """Parser for C# source code"""
+    """Parser for C# source code with CQRS/DDD, MassTransit, EF Core pattern recognition"""
     
     def parse(self, code: str) -> Dict[str, Any]:
-        """Parse C# code"""
+        """Parse C# code including CQRS/DDD patterns (FR-01), MassTransit (FR-02), EF Core (FR-03)"""
+        classes = self._extract_classes(code)
         result = {
             "namespace": self._extract_namespace(code),
             "using": self._extract_usings(code) if self.include_imports else [],
-            "classes": self._extract_classes(code),
+            "classes": classes,
             "interfaces": self._extract_interfaces(code),
             "enums": self._extract_enums(code),
             "structs": self._extract_structs(code),
-            "comments": self.extract_comments(code) if self.include_comments else []
+            "comments": self.extract_comments(code) if self.include_comments else [],
+            # FR-01: CQRS/DDD pattern elements
+            "cqrs_ddd": self._extract_cqrs_ddd_patterns(code, classes),
+            # FR-03: EF Core/Tibero data model
+            "ef_core": self._extract_ef_core(code),
         }
+        return result
+    
+    def _extract_cqrs_ddd_patterns(self, code: str, classes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """FR-01: Extract Commands, Queries, Handlers, Events, Consumers, Sagas, Aggregates, Entities, Value Objects, Repositories"""
+        patterns = {
+            "commands": [],
+            "queries": [],
+            "handlers": [],
+            "events": [],
+            "consumers": [],
+            "sagas": [],
+            "aggregates": [],
+            "entities": [],
+            "value_objects": [],
+            "repositories": [],
+        }
+        # Commands - ICommand, IRequest
+        for m in re.finditer(r"(?:class|record|interface)\s+(\w+)\s*[:\s].*?(?:ICommand|IRequest)[<\s]", code):
+            patterns["commands"].append({"name": m.group(1), "type": "command"})
+        for m in re.finditer(r"class\s+(\w+Command)\b", code):
+            if m.group(1) not in [c["name"] for c in patterns["commands"]]:
+                patterns["commands"].append({"name": m.group(1), "type": "command"})
+        # Queries
+        for m in re.finditer(r"(?:class|record|interface)\s+(\w+)\s*[:\s].*?(?:IQuery|IRequest)[<\s]", code):
+            patterns["queries"].append({"name": m.group(1), "type": "query"})
+        for m in re.finditer(r"class\s+(\w+Query)\b", code):
+            if m.group(1) not in [q["name"] for q in patterns["queries"]]:
+                patterns["queries"].append({"name": m.group(1), "type": "query"})
+        # Handlers - IRequestHandler, ICommandHandler
+        for m in re.finditer(r"class\s+(\w+)\s*:\s*[^{\n]*(?:IRequestHandler|ICommandHandler|IQueryHandler)[<\s]", code):
+            patterns["handlers"].append({"name": m.group(1)})
+        # Events
+        for m in re.finditer(r"(?:class|record|interface)\s+(\w+)\s*[:\s].*?(?:IEvent|INotification)[<\s]", code):
+            patterns["events"].append({"name": m.group(1)})
+        for m in re.finditer(r"(?:class|record)\s+(\w+Event)\b", code):
+            if m.group(1) not in [e["name"] for e in patterns["events"]]:
+                patterns["events"].append({"name": m.group(1)})
+        # Consumers - IConsumer<T>
+        for m in re.finditer(r"class\s+(\w+)\s*:\s*[^{\n]*IConsumer<\s*([\w.]+)\s*>", code):
+            patterns["consumers"].append({"consumer": m.group(1), "message": m.group(2)})
+        # Sagas - Saga, StateMachineSaga
+        for m in re.finditer(r"(?:class|:)\s*(\w+)\s*[:\s].*?(?:Saga|StateMachineSaga)[<\s]", code):
+            patterns["sagas"].append({"name": m.group(1)})
+        # Aggregates - often inherit from Entity or have Aggregate in name
+        for m in re.finditer(r"class\s+(\w+)\s*:\s*[^{\n]*(?:AggregateRoot|Entity)[^\s]*", code):
+            patterns["aggregates"].append({"name": m.group(1)})
+        for m in re.finditer(r"class\s+(\w+Aggregate)\b", code):
+            if m.group(1) not in [a["name"] for a in patterns["aggregates"]]:
+                patterns["aggregates"].append({"name": m.group(1)})
+        # Entities - DbSet, or class inheriting Entity
+        for m in re.finditer(r"class\s+(\w+)\s*:\s*[^{\n]*Entity", code):
+            if m.group(1) not in [e["name"] for e in patterns["entities"]]:
+                patterns["entities"].append({"name": m.group(1)})
+        for cls in classes:
+            if cls.get("name", "").endswith("Entity") and cls["name"] not in [e["name"] for e in patterns["entities"]]:
+                patterns["entities"].append({"name": cls["name"]})
+        # Value Objects - often record or sealed class
+        for m in re.finditer(r"(?:record|sealed\s+class)\s+(\w+)\s*[:\s]", code):
+            if "Value" in m.group(1) or m.group(1).endswith("Value"):
+                patterns["value_objects"].append({"name": m.group(1)})
+        # Repositories - IRepository, *Repository
+        for m in re.finditer(r"(?:interface)\s+(I\w*Repository)\b", code):
+            patterns["repositories"].append({"name": m.group(1), "type": "interface"})
+        for m in re.finditer(r"class\s+(\w+Repository)\s*:", code):
+            patterns["repositories"].append({"name": m.group(1), "type": "implementation"})
+        return patterns
+    
+    def _extract_ef_core(self, code: str) -> Dict[str, Any]:
+        """FR-03: Extract DbContext, entities, relationships (one-to-many, many-to-many)"""
+        result = {"db_contexts": [], "entities": [], "relationships": []}
+        # DbContext (including namespaced e.g. Microsoft.EntityFrameworkCore.DbContext)
+        for m in re.finditer(r"class\s+(\w+)\s*:\s*[\w.]*DbContext\b", code):
+            result["db_contexts"].append({"name": m.group(1)})
+        # DbSet entities
+        for m in re.finditer(r"DbSet<\s*([\w.]+)\s*>\s+(\w+)", code):
+            result["entities"].append({"type": m.group(1), "property": m.group(2)})
+        # HasOne, HasMany, WithOne, WithMany (relationship config)
+        for m in re.finditer(r"\.(HasOne|HasMany|WithOne|WithMany)\s*<\s*([\w.]+)\s*>", code):
+            result["relationships"].append({"relation": m.group(1), "target": m.group(2)})
         return result
     
     def _extract_namespace(self, code: str) -> str:

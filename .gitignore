@@ -42,6 +42,7 @@ docs/
 *.md
 !README.md
 !ARCHITECTURE.md
+!SRS_COMPLIANCE_ASSESSMENT.md
 
 # Temporary
 temp_repos/

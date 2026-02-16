@@ -1,9 +1,11 @@
-"""Git repository reader"""
+"""Git repository reader - SRS FR-16: Incremental scanning via Git diff"""
 
 import re
 import shutil
+import hashlib
+import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 try:
     import git
 except ImportError:
@@ -14,11 +16,14 @@ from .base_reader import BaseReader
 class GitReader(BaseReader):
     """Reads source code from a Git repository"""
     
-    def __init__(self, repo_path: str, branch: Optional[str] = None, config: Dict[str, Any] = None):
+    def __init__(self, repo_path: str, branch: Optional[str] = None, config: Dict[str, Any] = None,
+                 incremental: bool = False, ir_store_path: Optional[str] = None):
         super().__init__(config)
         self.repo_path = Path(repo_path)
         self.branch = branch
         self.repo = None
+        self.incremental = incremental
+        self.ir_store_path = ir_store_path or str(Path("./.techdocgen_ir") / "file_hashes.json")
     
     def _normalize_url(self, url: str) -> str:
         """Normalize and fix common URL issues"""
@@ -155,6 +160,44 @@ class GitReader(BaseReader):
         
         return list(self.iter_files())
 
+    def _get_changed_files(self) -> Optional[Set[str]]:
+        """FR-16: Get set of changed file paths from Git diff (HEAD vs working tree)"""
+        if not self.repo or not self.incremental:
+            return None
+        try:
+            changed = set()
+            for diff in self.repo.index.diff(None, create_patch=False):
+                if diff.a_path:
+                    changed.add(diff.a_path)
+                if diff.b_path and diff.b_path != diff.a_path:
+                    changed.add(diff.b_path)
+            for diff in self.repo.index.diff("HEAD", create_patch=False):
+                if diff.a_path:
+                    changed.add(diff.a_path)
+            return changed if changed else None
+        except Exception:
+            return None
+    
+    def _should_skip_incremental(self, relative_path: str, content: str) -> bool:
+        """Skip file if unchanged (same hash in store)"""
+        store = Path(self.ir_store_path)
+        if not store.parent.exists():
+            return False
+        try:
+            data = json.loads(store.read_text()) if store.exists() else {}
+            file_hash = hashlib.sha256(content.encode()).hexdigest()
+            return data.get(relative_path) == file_hash
+        except Exception:
+            return False
+    
+    def _update_ir_store(self, relative_path: str, content: str):
+        """Update IR store with file hash"""
+        store = Path(self.ir_store_path)
+        store.parent.mkdir(parents=True, exist_ok=True)
+        data = json.loads(store.read_text()) if store.exists() else {}
+        data[relative_path] = hashlib.sha256(content.encode()).hexdigest()
+        store.write_text(json.dumps(data, indent=2))
+    
     def iter_files(self):
         """Stream source code files from the Git repository"""
         try:
@@ -170,12 +213,19 @@ class GitReader(BaseReader):
         # Get repository root
         repo_root = Path(self.repo.working_dir)
         
+        # FR-16: Incremental - only yield changed files when enabled
+        changed_files = self._get_changed_files() if self.incremental else None
+        
         print("Scanning repository for source files...")
         for file_path in repo_root.rglob("*"):
             if not file_path.is_file():
                 continue
             
             if file_path.suffix.lower() not in all_extensions:
+                continue
+            
+            rel_path = str(file_path.relative_to(repo_root))
+            if changed_files is not None and rel_path not in changed_files:
                 continue
             
             if not self._should_include(file_path):
@@ -192,15 +242,22 @@ class GitReader(BaseReader):
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                 
+                rel_path = str(file_path.relative_to(repo_root))
+                if self.incremental and self._should_skip_incremental(rel_path, content):
+                    continue
+                
                 language = self._detect_language(file_path)
                 
-                yield {
+                file_info = {
                     "path": str(file_path),
                     "content": content,
                     "language": language,
                     "name": file_path.name,
-                    "relative_path": str(file_path.relative_to(repo_root))
+                    "relative_path": rel_path
                 }
+                if self.incremental:
+                    self._update_ir_store(rel_path, content)
+                yield file_info
             except Exception as e:
                 print(f"Error reading file {file_path}: {e}")
                 continue

@@ -1,4 +1,4 @@
-"""TypeScript code parser"""
+"""TypeScript code parser - SRS FR-04 (Node.js Express/NestJS), FR-05 (Angular micro-frontend)"""
 
 import re
 from typing import Dict, List, Any
@@ -6,10 +6,10 @@ from .base_parser import BaseParser
 
 
 class TypeScriptParser(BaseParser):
-    """Parser for TypeScript source code"""
+    """Parser for TypeScript/JavaScript: Node.js (Express/NestJS) + Angular micro-frontend"""
     
     def parse(self, code: str) -> Dict[str, Any]:
-        """Parse TypeScript code"""
+        """Parse TypeScript code with FR-04 (Express/NestJS) and FR-05 (Angular) extraction"""
         result = {
             "imports": self._extract_imports(code) if self.include_imports else [],
             "classes": self._extract_classes(code),
@@ -17,8 +17,69 @@ class TypeScriptParser(BaseParser):
             "types": self._extract_types(code),
             "enums": self._extract_enums(code),
             "functions": self._extract_functions(code),
-            "comments": self.extract_comments(code) if self.include_comments else []
+            "comments": self.extract_comments(code) if self.include_comments else [],
+            # FR-04: Express/NestJS routes, controllers, amqplib
+            "nodejs": self._extract_nodejs_routes(code),
+            # FR-05: Angular components, services, modules, routing, guards, interceptors
+            "angular": self._extract_angular_elements(code),
         }
+        return result
+    
+    def _extract_nodejs_routes(self, code: str) -> Dict[str, Any]:
+        """FR-04: API routes, middleware, controllers, amqplib integration points"""
+        routes = []
+        # Express: app.get|post|put|delete|patch('path', ...), router.get('path', ...)
+        for m in re.finditer(r'(?:app|router)\s*\.\s*(get|post|put|delete|patch|all)\s*\(\s*[\'"`]([^\'"`]+)[\'"`]', code):
+            routes.append({"method": m.group(1).upper(), "path": m.group(2)})
+        # NestJS: @Controller('path'), @Get(), @Post('path')
+        controller_path = ""
+        for m in re.finditer(r'@Controller\s*\(\s*[\'"`]([^\'"`]*)[\'"`]\s*\)', code):
+            controller_path = m.group(1)
+        for m in re.finditer(r'@(Get|Post|Put|Delete|Patch|Options|Head)\s*(?:\(\s*[\'"`]([^\'"`]*)[\'"`]\s*\))?', code):
+            path = m.group(2) or ""
+            full = (controller_path.rstrip("/") + "/" + path.lstrip("/")).replace("//", "/") or controller_path
+            routes.append({"method": m.group(1).upper(), "path": full or controller_path})
+        # amqplib usage
+        amqplib = "amqplib" in code or "amqp.connect" in code
+        return {"routes": routes, "amqplib": amqplib}
+    
+    def _extract_angular_elements(self, code: str) -> Dict[str, Any]:
+        """FR-05: Components, services, modules, routing, guards, interceptors"""
+        result = {
+            "components": [],
+            "services": [],
+            "modules": [],
+            "routing": [],
+            "guards": [],
+            "interceptors": [],
+        }
+        # @Component
+        for m in re.finditer(r'@Component\s*\(\s*\{[^}]*selector\s*:\s*[\'"`]([^\'"`]+)[\'"`]', code):
+            result["components"].append({"selector": m.group(1)})
+        for m in re.finditer(r'export\s+class\s+(\w+)\s*[^{\n]*@Component', code):
+            result["components"].append({"class": m.group(1)})
+        # @Injectable (services)
+        for m in re.finditer(r'export\s+class\s+(\w+)\s*(?:Service|Injectable)', code):
+            result["services"].append({"name": m.group(1)})
+        for m in re.finditer(r'@Injectable\s*\([^)]*\)[^}]*export\s+class\s+(\w+)', code):
+            if m.group(1) not in [s.get("name") for s in result["services"]]:
+                result["services"].append({"name": m.group(1)})
+        # @NgModule
+        for m in re.finditer(r'@NgModule\s*\([^)]*\)[^}]*export\s+class\s+(\w+)Module', code):
+            result["modules"].append({"name": m.group(1)})
+        # RouterModule, routes config
+        for m in re.finditer(r'path\s*:\s*[\'"`]([^\'"`]+)[\'"`]\s*(?:,|})', code):
+            result["routing"].append({"path": m.group(1)})
+        for m in re.finditer(r'Routes\s*=\s*\[\s*(\{[^]]+\})', code):
+            result["routing"].append({"config": "present"})
+        # Guards
+        for m in re.finditer(r'canActivate\s*:\s*\[([^\]]+)\]', code):
+            result["guards"].append({"guards": m.group(1).split(",")})
+        for m in re.finditer(r'implements\s+CanActivate', code):
+            result["guards"].append({"type": "CanActivate"})
+        # Interceptors
+        for m in re.finditer(r'implements\s+HttpInterceptor', code):
+            result["interceptors"].append({"type": "HttpInterceptor"})
         return result
     
     def _extract_imports(self, code: str) -> List[str]:

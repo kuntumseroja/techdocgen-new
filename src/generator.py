@@ -366,6 +366,8 @@ class DocumentationGenerator:
             dependency_analysis["dependency_map"] if dependency_analysis else None
         )
         correlation_graph = build_correlation_mermaid(correlation_signals)
+        doc_config = self.config.config.get("documentation", {})
+        verbosity = doc_config.get("verbosity", "detailed")  # FR-14: concise | detailed
         template_context = {
             "llm_provider": llm_provider,
             "model_name": model_name,
@@ -380,7 +382,8 @@ class DocumentationGenerator:
             "service_catalog": service_catalog,
             "app_sequence_diagram": app_sequence_diagram,
             "correlation_signals": correlation_signals,
-            "correlation_graph": correlation_graph
+            "correlation_graph": correlation_graph,
+            "verbosity": verbosity,  # FR-14: concise = diagram-heavy; detailed = full narrative
         }
         
         # Render template
